@@ -1,6 +1,6 @@
-# MicroWeb
+# WebPy
 
-MicroWeb is a compact Python micro-framework, simplifying web development with its minimalist approach. Build lightweight and efficient web applications effortlessly.
+WebPy is a compact Python micro-framework, simplifying web development with its minimalist approach. Build lightweight and efficient web applications effortlessly.
 
 ## Introduction
 
@@ -20,7 +20,7 @@ To get started with MicroWeb, follow these simple steps:
 1. Install MicroWeb using pip:
 
 ```
-pip install microweb
+pip install webpy
 ```
 
 2. Create a new Python file for your web application, e.g., `app.py`.
