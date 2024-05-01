@@ -28,16 +28,28 @@ pip install webpy
 3. Write your web application code using MicroWeb's simple routing system.
 
 ```python
-from microweb import MicroWeb
+from webpy import WebPy
 
-app = MicroWeb()
+# Instantiate the WebPyApp wrapper
+web_app = WebPyApp()
 
-@app.route("/")
-def index(request, response):
-    return "Hello, World!"
+# Define a route and corresponding handler function
+@web_app.route("/hello", methods=['GET', 'POST'])
+def hello(request, response):
+    if request.method == 'GET':
+        name = request.query_params.get('name', 'Guest')
+        response.body = f"Hello, {name}!".encode('utf-8')
+    elif request.method == 'POST':
+        data = request.json()
+        if 'name' in data:
+            response.json({'message': f"Hello, {data['name']}!"})
+        else:
+            response.json({'error': 'Name not provided'}), 400
 
-if __name__ == "__main__":
-    app.run()
+
+# Run the application
+web_app.run()
+
 ```
 
 4. Run your web application:
