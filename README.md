@@ -1,7 +1,3 @@
-Certainly! Here's a simple README for your MicroWeb framework:
-
----
-
 # MicroWeb
 
 MicroWeb is a compact Python micro-framework, simplifying web development with its minimalist approach. Build lightweight and efficient web applications effortlessly.
