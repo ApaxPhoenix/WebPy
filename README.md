@@ -70,8 +70,5 @@ For help or questions about MicroWeb, please visit our [GitHub repository](https
 
 ## License
 
-MicroWeb is released under the MIT License. See [LICENSE](LICENSE) for details.
+WebPy is released under the BSD License. See [LICENSE](LICENSE) for details.
 
----
-
-Feel free to adjust and expand it as needed!
