@@ -13,7 +13,6 @@ class WebPyApp:
         def decorator(handler):
             self.app.route(path, methods)(handler)
             return handler
-
         return decorator
 
     def run(self, ip='127.0.0.1', port=8080):
