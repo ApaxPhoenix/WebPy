@@ -1,5 +1,5 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from packets import Request, Response
+from events import Request, Response
 from jinja2 import Environment, FileSystemLoader
 from pathlib import Path
 
