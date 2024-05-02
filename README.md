@@ -17,7 +17,7 @@ MicroWeb is designed to make web development quick and easy, with the flexibilit
 
 To get started with MicroWeb, follow these simple steps:
 
-1. Install MicroWeb using pip:
+1. Install WebPy using pip:
 
 ```
 pip install webpy
