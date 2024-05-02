@@ -58,7 +58,7 @@ web_app.run()
 python app.py
 ```
 
-Your MicroWeb application is now running at `http://127.0.0.1:8080/`.
+Your WebPy application is now running at `http://127.0.0.1:8080/`.
 
 ## Contributing
 
