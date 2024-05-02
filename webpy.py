@@ -1,6 +1,6 @@
 from core import WebPyCore
 
-class WebPyApp:
+class WebPy:
     def __init__(self):
         # Initialize WebPyCore as part of the WebPyApp
         self.app = WebPyCore
