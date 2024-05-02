@@ -66,9 +66,9 @@ MicroWeb is an open-source project developed and maintained by the community. Co
 
 ## Support
 
-For help or questions about MicroWeb, please visit our [GitHub repository](https://github.com/microweb/microweb) or join our [community chat](https://discord.gg/microweb).
+For help or questions about MicroWeb, please visit our [GitHub repository](https://github.com/webpy/webpy) or join our [community chat](https://discord.gg/webpy).
 
 ## License
 
-WebPy is released under the BSD License. See [LICENSE](LICENSE) for details.
+WebPy is released under the GLP-3.0 License. See [LICENSE](LICENSE) for details.
 
