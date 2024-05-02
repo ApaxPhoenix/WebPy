@@ -34,21 +34,32 @@ from webpy import WebPy
 web_app = WebPyApp()
 
 # Define a route and corresponding handler function
-@web_app.route("/hello", methods=['GET', 'POST'])
+@web_app.route("/hello", methods=['GET'])
 def hello(request, response):
     if request.method == 'GET':
-        name = request.query_params.get('name', 'Guest')
-        response.body = f"Hello, {name}!".encode('utf-8')
-    elif request.method == 'POST':
-        data = request.json()
-        if 'name' in data:
-            response.json({'message': f"Hello, {data['name']}!"})
-        else:
-            response.json({'error': 'Name not provided'}), 400
-
+        # Return a simple HTML page
+        html_content = """
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Hello Page</title>
+        </head>
+        <body>
+            <h1>Hello, World!</h1>
+        </body>
+        </html>
+        """
+        # Set the response content type to HTML
+        response.headers['Content-Type'] = 'text/html'
+        response.body = html_content.encode('utf-8')
 
 # Run the application
 web_app.run()
+
+
+
 
 ```
 
