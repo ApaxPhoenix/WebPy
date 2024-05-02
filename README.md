@@ -25,7 +25,7 @@ pip install webpy
 
 2. Create a new Python file for your web application, e.g., `app.py`.
 
-3. Write your web application code using MicroWeb's simple routing system.
+3. Write your web application code using WebPy's simple routing system.
 
 ```python
 from webpy import WebPy
