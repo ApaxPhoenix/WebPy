@@ -69,7 +69,7 @@ Your WebPy application is now running at `http://127.0.0.1:8080/`.
 
 ## Contributing
 
-MicroWeb is an open-source project developed and maintained by the community. Contributions are welcome and encouraged! If you'd like to contribute, please check out our [contribution guidelines](CONTRIBUTING.md).
+WebPy is an open-source project developed and maintained by the community. Contributions are welcome and encouraged! If you'd like to contribute, please check out our [contribution guidelines](CONTRIBUTING.md).
 
 ## Support
 
