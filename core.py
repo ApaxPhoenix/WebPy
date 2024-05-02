@@ -3,11 +3,10 @@ from utils import Request, Response
 from jinja2 import Environment, FileSystemLoader
 from pathlib import Path
 
-
 class WebPyCore(BaseHTTPRequestHandler):
-    router = {}
-    template_env = Environment(loader=FileSystemLoader(Path("templates")))
-    static_env = Path("static")
+    router = {}  # Dictionary to store registered routes
+    template_env = Environment(loader=FileSystemLoader(Path("templates")))  # Jinja2 environment for templates
+    static_env = Path("static")  # Path to static files directory
 
     @classmethod
     def route(cls, path, methods=None):
@@ -16,20 +15,25 @@ class WebPyCore(BaseHTTPRequestHandler):
             methods = ['GET']
 
         def decorator(handler):
+            """Decorator function to register routes."""
             cls.router[path] = {'handler': handler, 'methods': methods}
             return handler
         return decorator
 
     def do_GET(self):
+        """Handle HTTP GET requests."""
         self.handle_request("GET")
 
     def do_POST(self):
+        """Handle HTTP POST requests."""
         self.handle_request("POST")
 
     def do_DELETE(self):
+        """Handle HTTP DELETE requests."""
         self.handle_request("DELETE")
 
     def handle_request(self, method):
+        """Handle HTTP requests."""
         try:
             request = Request(self)
             self.handle_route_request(method, request)
@@ -37,6 +41,7 @@ class WebPyCore(BaseHTTPRequestHandler):
             self.send_error(500, f"Internal Server Error: {str(e)}")
 
     def handle_route_request(self, method, request):
+        """Handle requests for registered routes."""
         try:
             handler_info = self.router.get(request.path)
             if handler_info:
@@ -54,7 +59,7 @@ class WebPyCore(BaseHTTPRequestHandler):
             self.send_error(500, f"Internal Server Error: {str(error)}")
 
     def serve_static_file(self, path):
-        """Serve static files"""
+        """Serve static files."""
         if path.startswith('/static/'):
             relative_path = path[len('/static/'):]
             try:
@@ -74,12 +79,13 @@ class WebPyCore(BaseHTTPRequestHandler):
                 self.send_error(404)
 
     def render_template(self, template_name, **kwargs):
-        """Render Jinja2 template"""
+        """Render Jinja2 template."""
         template = self.template_env.get_template(template_name)
         return template.render(**kwargs)
 
     @classmethod
     def run(cls, server_class=HTTPServer, handler_class=None, ip=None, port=None):
+        """Start the web server."""
         if handler_class is None:
             handler_class = cls
         try:
