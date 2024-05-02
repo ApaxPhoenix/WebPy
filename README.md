@@ -1,6 +1,3 @@
-Sure, let's adapt the markdown to fit a crawler library instead of a web framework:
-
-```markdown
 # CrawlPy
 
 CrawlPy is a lightweight Python library for web crawling, making it easy to fetch and process web content efficiently.
@@ -69,6 +66,3 @@ For help or questions about CrawlPy, please visit our [GitHub repository](https:
 ## License
 
 CrawlPy is released under the GLP-3.0 License. See [LICENSE](LICENSE) for details.
-```
-
-This markdown is tailored to introduce and provide information about a web crawling library called CrawlPy, including how to install it, get started, contribute, and get support. Let me know if you need further modifications or assistance!
