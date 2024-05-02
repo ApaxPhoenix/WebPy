@@ -4,7 +4,7 @@ WebPy is a compact Python micro-framework, simplifying web development with its 
 
 ## Introduction
 
-MicroWeb is designed to make web development quick and easy, with the flexibility to scale up to more complex projects. It provides a lightweight framework for building web applications in Python.
+WebPy is designed to make web development quick and easy, with the flexibility to scale up to more complex projects. It provides a lightweight framework for building web applications in Python.
 
 ## Features
 
