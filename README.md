@@ -57,10 +57,6 @@ def hello(request, response):
 
 # Run the application
 web_app.run()
-
-
-
-
 ```
 
 4. Run your web application:
