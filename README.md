@@ -1,68 +1,80 @@
-# CrawlPy
+# WebPy
 
-CrawlPy is a lightweight Python library for web crawling, making it easy to fetch and process web content efficiently.
+WebPy is a compact Python micro-framework, simplifying web development with its minimalist approach. Build lightweight and efficient web applications effortlessly.
 
 ## Introduction
 
-CrawlPy simplifies the process of web crawling by providing a minimalist framework for fetching and parsing web pages in Python.
+MicroWeb is designed to make web development quick and easy, with the flexibility to scale up to more complex projects. It provides a lightweight framework for building web applications in Python.
 
 ## Features
 
 - Lightweight and minimalist
-- Simple API for making HTTP requests
-- Flexible enough to handle various crawling tasks
-- Support for handling cookies and custom headers
+- Simplified project structure
+- No enforced dependencies
+- Easy to scale and extend with community-provided extensions
 
 ## Getting Started
 
-To get started with CrawlPy, follow these simple steps:
+To get started with MicroWeb, follow these simple steps:
 
-1. Install CrawlPy using pip:
+1. Install WebPy using pip:
 
-```bash
-pip install crawlpy
+```
+pip install webpy
 ```
 
-2. Create a new Python file for your crawler, e.g., `crawler.py`.
+2. Create a new Python file for your web application, e.g., `app.py`.
 
-3. Write your crawling logic using CrawlPy's easy-to-use API.
+3. Write your web application code using WebPy's simple routing system.
 
 ```python
-from crawlpy import CrawlPy
-       
-# Create a CrawlPy instance
-crawler = CrawlPy()
+from webpy import WebPy
 
-# Make a GET request
-response = crawler.get('https://example.com/resource')
+# Instantiate the WebPyApp wrapper
+web_app = WebPy()
 
-# Check the response status code
-print("Status Code:", response.status)
+# Define a route and corresponding handler function
+@web_app.route("/hello", methods=['GET'])
+def hello(request, response):
+    if request.method == 'GET':
+        # Return a simple HTML page
+        html_content = """
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Hello Page</title>
+        </head>
+        <body>
+            <h1>Hello, World!</h1>
+        </body>
+        </html>
+        """
+        # Set the response content type to HTML
+        response.headers['Content-Type'] = 'text/html'
+        response.body = html_content.encode('utf-8')
 
-# Read the response content
-content = response.content.decode('utf-8')
-print("Response Content:", content)
-
-# Close the connections when done
-crawler.close()
+# Run the application
+web_app.run()
 ```
 
-4. Run your crawler:
+4. Run your web application:
 
-```bash
-python crawler.py
+```
+python app.py
 ```
 
-Your CrawlPy crawler is now fetching web content!
+Your WebPy application is now running at `http://127.0.0.1:8080/`.
 
 ## Contributing
 
-CrawlPy is an open-source project developed and maintained by the community. Contributions are welcome and encouraged! If you'd like to contribute, please check out our [contribution guidelines](CONTRIBUTING.md).
+WebPy is an open-source project developed and maintained by the community. Contributions are welcome and encouraged! If you'd like to contribute, please check out our [contribution guidelines](CONTRIBUTING.md).
 
 ## Support
 
-For help or questions about CrawlPy, please visit our [GitHub repository](https://github.com/crawlpy/crawlpy) or join our [community chat](https://discord.gg/CrawlPy).
+For help or questions about MicroWeb, please visit our [GitHub repository](https://github.com/webpy/webpy) or join our [community chat](https://discord.gg/D4gsQG7hmU).
 
 ## License
 
-CrawlPy is released under the GLP-3.0 License. See [LICENSE](LICENSE) for details.
+WebPy is released under the GLP-3.0 License. See [LICENSE](LICENSE) for details.
