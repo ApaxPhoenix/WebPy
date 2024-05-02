@@ -31,7 +31,7 @@ pip install webpy
 from webpy import WebPy
 
 # Instantiate the WebPyApp wrapper
-web_app = WebPyApp()
+web_app = WebPy()
 
 # Define a route and corresponding handler function
 @web_app.route("/hello", methods=['GET'])
