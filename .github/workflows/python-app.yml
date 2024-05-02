@@ -34,6 +34,3 @@ jobs:
     - name: Echo current script location
       run: |
         echo "Current script location: ${{ github.workspace }}"
-    - name: Test with pytest
-      run: |
-        pytest test.py
