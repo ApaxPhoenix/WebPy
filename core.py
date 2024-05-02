@@ -2,6 +2,55 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from jinja2 import Environment, FileSystemLoader
 from pathlib import Path
+import json
+
+class Request:
+    def __init__(self, handler):
+        self.handler = handler
+
+    @property
+    def method(self):
+        return self.handler.command
+
+    @property
+    def path(self):
+        return self.handler.path
+
+    @property
+    def query_params(self):
+        parsed_url = urlparse(self.path)
+        return parse_qs(parsed_url.query)
+
+    @property
+    def fragment(self):
+        parsed_url = urlparse(self.path)
+        return parsed_url.fragment
+
+    def json(self):
+        content_length = int(self.handler.headers.get('Content-Length', 0))
+        post_data = self.handler.rfile.read(content_length)
+        return json.loads(post_data.decode('utf-8'))
+
+
+class Response:
+    def __init__(self, handler):
+        self.handler = handler
+        self.status_code = 200
+        self.headers = {}
+        self.body = b''
+
+    def send(self):
+        self.handler.send_response(self.status_code)
+        for key, value in self.headers.items():
+            self.handler.send_header(key, value)
+        self.handler.end_headers()
+        self.handler.wfile.write(self.body)
+
+    def json(self, data):
+        self.headers['Content-Type'] = 'application/json'
+        self.body = json.dumps(data).encode('utf-8')
+        self.send()
+
 
 class WebPyCore(BaseHTTPRequestHandler):
     router = {}
@@ -9,10 +58,10 @@ class WebPyCore(BaseHTTPRequestHandler):
     static_env = Path("static")
     
     @classmethod
-    def route(cls, path):
+    def route(cls, path, methods=['GET']):
         """Decorator to register routes"""
         def decorator(handler):
-            cls.router[path] = handler
+            cls.router[path] = {'handler': handler, 'methods': methods}
             return handler
         return decorator
 
@@ -27,24 +76,25 @@ class WebPyCore(BaseHTTPRequestHandler):
 
     def handle_request(self, method):
         try:
-            parsed_url = urlparse(self.path)
-            path = parsed_url.path
-            query_params = {k: v[0] for k, v in parse_qs(parsed_url.query).items()}  # Parse query parameters
-            fragment = parsed_url.fragment
-            self.handle_route_request(method, path, query_params, fragment)
+            request = Request(self)
+            self.handle_route_request(method, request)
         except Exception as e:
             self.send_error(500, f"Internal Server Error: {str(e)}")
 
-    def handle_route_request(self, method, path, query_params, fragment):
+    def handle_route_request(self, method, request):
         try:
-            if method == "GET" and path.startswith('/static'):
-                self.serve_static_file(path)
-            else:
-                handler = self.router.get(path)
-                if handler:
-                    handler(self, query_params, fragment)
+            handler_info = self.router.get(request.path)
+            if handler_info:
+                allowed_methods = handler_info.get('methods', ['GET'])
+                if method in allowed_methods:
+                    handler = handler_info['handler']
+                    response = Response(self)
+                    handler(request, response)
+                    response.send()
                 else:
-                    self.send_error(404, "Not Found")
+                    self.send_error(405, f"Method {method} not allowed")
+            else:
+                self.send_error(404, "Not Found")
         except Exception as error:
             self.send_error(500, f"Internal Server Error: {str(error)}")
 
@@ -74,7 +124,7 @@ class WebPyCore(BaseHTTPRequestHandler):
         return template.render(**kwargs)
     
     @classmethod
-    def run(cls, server_class=HTTPServer, handler_class=None, ip='127.0.0.1', port=8085):
+    def run(cls, server_class=HTTPServer, handler_class=None, ip=None, port=None):
         if handler_class is None:
             handler_class = cls
         try:
