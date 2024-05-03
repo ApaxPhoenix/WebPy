@@ -1,12 +1,13 @@
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from objects import Request, Response
-from jinja2 import Environment, FileSystemLoader
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from jinja2 import Environment, FileSystemLoader
+from broadcast import Request, Response
+from router import Router
+
 
 class WebPyCore(BaseHTTPRequestHandler):
-    router = {}  # Dictionary to store registered routes
-    template_env = Environment(loader=FileSystemLoader(Path("templates")))  # Jinja2 environment for templates
-    static_env = Path("static")  # Path to static files directory
+    template_env = Environment(loader=FileSystemLoader(Path("templates")))
+    static_env = Path("static")
 
     @classmethod
     def route(cls, path, methods=None):
@@ -16,8 +17,9 @@ class WebPyCore(BaseHTTPRequestHandler):
 
         def decorator(handler):
             """Decorator function to register routes."""
-            cls.router[path] = {'handler': handler, 'methods': methods}
+            Router.route(path, methods)(handler)
             return handler
+
         return decorator
 
     def do_GET(self):
@@ -43,9 +45,9 @@ class WebPyCore(BaseHTTPRequestHandler):
     def handle_route_request(self, method, request):
         """Handle requests for registered routes."""
         try:
-            handler_info = self.router.get(request.path)
+            handler_info = Router.get_route(request.path)
             if handler_info:
-                allowed_methods = handler_info.get('methods', ['GET'])
+                allowed_methods = Router.get_allowed_methods(request.path)
                 if method in allowed_methods:
                     handler = handler_info['handler']
                     response = Response(self)
@@ -84,7 +86,7 @@ class WebPyCore(BaseHTTPRequestHandler):
         return template.render(**kwargs)
 
     @classmethod
-    def run(cls, server_class=HTTPServer, handler_class=None, ip=None, port=None):
+    def run(cls, ip=None, port=None, server_class=HTTPServer, handler_class=None):
         """Start the web server."""
         if handler_class is None:
             handler_class = cls
