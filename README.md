@@ -56,7 +56,7 @@ def hello(request, response):
         response.body = html_content.encode('utf-8')
 
 # Run the application
-web_app.run()
+web_app.run(ip='127.0.0.1', port=8080)
 ```
 
 4. Run your web application:
