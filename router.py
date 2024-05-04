@@ -1,4 +1,3 @@
-# router.py
 class Router:
     routes = {}
 
