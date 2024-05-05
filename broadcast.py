@@ -1,5 +1,5 @@
 import json
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, urldefrag, parse_qs
 
 
 class Request:
@@ -50,8 +50,8 @@ class Request:
         Returns:
             dict: A dictionary containing the query parameters.
         """
-        parsed_url = urlparse(self.path)
-        return parse_qs(parsed_url.query)
+        parsed_url = urldefrag(self.path)
+        return parse_qs(parsed_url.fragment)
 
     @property
     def fragment(self):
@@ -62,7 +62,7 @@ class Request:
             str: The fragment from the request URL.
         """
         parsed_url = urlparse(self.path)
-        return parsed_url.fragment
+        return parse_qs(parsed_url.fragment)
 
     def json(self):
         """
