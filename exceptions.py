@@ -1,13 +1,15 @@
 class PortInUseError(Exception):
-    def __init__(self, port):
+    """
+    Exception raised when a port is already in use.
+    """
+    def __init__(self, message):
         """
         Initialize a PortInUseError.
 
         Args:
-            port (int): The port number that is already in use.
+            message (str): The error message.
         """
-        self.port = port
-        self.message = f"Port {port} is already in use."
+        self.message = message
 
     def __str__(self):
         """
@@ -20,15 +22,17 @@ class PortInUseError(Exception):
 
 
 class MethodNotAllowedError(Exception):
-    def __init__(self, method):
+    """
+    Exception raised when a method is not allowed.
+    """
+    def __init__(self, message):
         """
         Initialize a MethodNotAllowedError.
 
         Args:
-            method (str): The HTTP method that is not allowed.
+            message (str): The error message.
         """
-        self.method = method
-        self.message = f"Method {method} is not allowed."
+        self.message = message
 
     def __str__(self):
         """
@@ -41,15 +45,17 @@ class MethodNotAllowedError(Exception):
 
 
 class RouteNotFoundError(Exception):
-    def __init__(self, path):
+    """
+    Exception raised when a route is not found.
+    """
+    def __init__(self, message):
         """
         Initialize a RouteNotFoundError.
 
         Args:
-            path (str): The path that was not found.
+            message (str): The error message.
         """
-        self.path = path
-        self.message = f"Route {path} not found."
+        self.message = message
 
     def __str__(self):
         """
@@ -62,15 +68,17 @@ class RouteNotFoundError(Exception):
 
 
 class APIRouteNotFoundError(Exception):
-    def __init__(self, path):
+    """
+    Exception raised when an API route is not found.
+    """
+    def __init__(self, message):
         """
         Initialize an APIRouteNotFoundError.
 
         Args:
-            path (str): The API route that was not found.
+            message (str): The error message.
         """
-        self.path = path
-        self.message = f"API Route {path} not found."
+        self.message = message
 
     def __str__(self):
         """
@@ -83,50 +91,101 @@ class APIRouteNotFoundError(Exception):
 
 
 class UnsupportedMethodError(Exception):
-    def __init__(self, method):
+    """
+    Exception raised when an unsupported HTTP method is used.
+    """
+    def __init__(self, message):
         """
         Initialize an UnsupportedMethodError.
 
         Args:
-            method (str): The HTTP method that is not supported.
+            message (str): The error message.
         """
-        super().__init__(f"Unsupported HTTP method: {method}")
+        self.message = message
+
+    def __str__(self):
+        """
+        Return the error message as a string.
+
+        Returns:
+            str: Error message.
+        """
+        return self.message
 
 
 class InvalidPathError(Exception):
-    def __init__(self, path):
+    """
+    Exception raised when an invalid path is provided.
+    """
+    def __init__(self, message):
         """
         Initialize an InvalidPathError.
 
         Args:
-            path (str): The invalid path.
+            message (str): The error message.
         """
-        super().__init__(f"Invalid path: {path}")
+        self.message = message
+
+    def __str__(self):
+        """
+        Return the error message as a string.
+
+        Returns:
+            str: Error message.
+        """
+        return self.message
 
 
 class InvalidQueryError(Exception):
-    def __init__(self, query):
+    """
+    Exception raised when invalid query parameters are provided.
+    """
+    def __init__(self, message):
         """
         Initialize an InvalidQueryError.
 
         Args:
-            query (str): The invalid query parameters.
+            message (str): The error message.
         """
-        super().__init__(f"Invalid query parameters: {query}")
+        self.message = message
+
+    def __str__(self):
+        """
+        Return the error message as a string.
+
+        Returns:
+            str: Error message.
+        """
+        return self.message
 
 
 class InvalidFragmentError(Exception):
-    def __init__(self, fragment):
+    """
+    Exception raised when an invalid fragment is provided.
+    """
+    def __init__(self, message):
         """
         Initialize an InvalidFragmentError.
 
         Args:
-            fragment (str): The invalid fragment.
+            message (str): The error message.
         """
-        super().__init__(f"Invalid fragment: {fragment}")
+        self.message = message
+
+    def __str__(self):
+        """
+        Return the error message as a string.
+
+        Returns:
+            str: Error message.
+        """
+        return self.message
 
 
 class InternalServerError(Exception):
+    """
+    Exception raised for internal server errors.
+    """
     def __init__(self, message):
         """
         Initialize an InternalServerError.
@@ -134,4 +193,106 @@ class InternalServerError(Exception):
         Args:
             message (str): The error message.
         """
-        super().__init__(f"Internal Server Error: {message}")
+        self.message = message
+
+    def __str__(self):
+        """
+        Return the error message as a string.
+
+        Returns:
+            str: Error message.
+        """
+        return self.message
+
+
+class RequestParsingError(Exception):
+    """
+    Exception raised when there is an error parsing the request.
+    """
+    def __init__(self, message):
+        """
+        Initialize a RequestParsingError.
+
+        Args:
+            message (str): The error message.
+        """
+        self.message = message
+
+    def __str__(self):
+        """
+        Return the error message as a string.
+
+        Returns:
+            str: Error message.
+        """
+        return self.message
+
+
+class JSONParsingError(Exception):
+    """
+    Exception raised when there is an error parsing JSON data from the request body.
+    """
+    def __init__(self, message):
+        """
+        Initialize a JSONParsingError.
+
+        Args:
+            message (str): The error message.
+        """
+        self.message = message
+
+    def __str__(self):
+        """
+        Return the error message as a string.
+
+        Returns:
+            str: Error message.
+        """
+        return self.message
+
+
+class ResponseSendingError(Exception):
+    """
+    Exception raised when there is an error sending the response.
+    """
+    def __init__(self, message):
+        """
+        Initialize a ResponseSendingError.
+
+        Args:
+            message (str): The error message.
+        """
+        self.message = message
+
+    def __str__(self):
+        """
+        Return the error message as a string.
+
+        Returns:
+            str: Error message.
+        """
+        return self.message
+
+
+class JSONResponseError(Exception):
+    """
+    Exception raised when there is an error setting the response body to JSON.
+    """
+    def __init__(self, message):
+        """
+        Initialize a JSONResponseError.
+
+        Args:
+            message (str): The error message.
+        """
+        self.message = message
+
+    def __str__(self):
+        """
+        Return the error message as a string.
+
+        Returns:
+            str: Error message.
+        """
+        return self.message
+    

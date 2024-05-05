@@ -1,7 +1,6 @@
 import json
 from urllib.parse import urlparse, parse_qs
 
-
 class Request:
     def __init__(self, handler):
         """
@@ -43,7 +42,7 @@ class Request:
         return self.handler.headers
 
     @property
-    def query_params(self):
+    def params(self):
         """
         Get the query parameters from the request URL.
 
@@ -77,7 +76,6 @@ class Request:
             return json.loads(post_data.decode('utf-8'))
         else:
             return {}
-
 
 class Response:
     def __init__(self, handler):

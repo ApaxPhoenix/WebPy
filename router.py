@@ -6,7 +6,7 @@ class Router:
         """Decorator to register routes"""
         if methods is None:
             methods = ['GET']
-            
+
         def decorator(handler):
             """Decorator function to register routes."""
             cls.routes[path] = {'handler': handler, 'methods': methods}
@@ -25,4 +25,3 @@ class Router:
         if route:
             return route.get('methods', ['GET'])
         return ['GET']
-    
