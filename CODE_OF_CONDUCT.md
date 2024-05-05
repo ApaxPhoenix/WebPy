@@ -27,7 +27,7 @@ The following behaviors are considered unacceptable and will not be tolerated:
 
 ## Enforcement
 
-Instances of unacceptable behavior may be reported by contacting the project team at [report@palletsprojects.com](mailto:report@palletsprojects.com). All reports will be reviewed and investigated promptly, and appropriate action will be taken in response to the circumstances.
+Instances of unacceptable behavior may be reported by contacting the project team at [report@webpy.com](mailto:report@webpy.com). All reports will be reviewed and investigated promptly, and appropriate action will be taken in response to the circumstances.
 
 Project maintainers have the right and responsibility to remove, edit, or reject comments, commits, code, wiki edits, issues, and other contributions that are not aligned with this Code of Conduct, or to ban temporarily or permanently any contributor for behavior that violates these standards.
 
