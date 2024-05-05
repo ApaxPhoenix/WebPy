@@ -1,6 +1,7 @@
 import json
 from urllib.parse import urlparse, parse_qs
 
+
 class Request:
     def __init__(self, handler):
         """
@@ -76,6 +77,7 @@ class Request:
             return json.loads(post_data.decode('utf-8'))
         else:
             return {}
+
 
 class Response:
     def __init__(self, handler):
