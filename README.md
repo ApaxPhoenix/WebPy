@@ -73,7 +73,7 @@ WebPy is an open-source project developed and maintained by the community. Contr
 
 ## Support
 
-For help or questions about MicroWeb, please visit our [GitHub repository](https://github.com/webpy/webpy) or join our [community chat](https://discord.gg/webpy).
+For help or questions about WebPy, please visit our [GitHub repository](https://github.com/webpy/webpy) or join our [community chat](https://discord.gg/webpy).
 
 ## License
 
