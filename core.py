@@ -19,7 +19,6 @@ class WebPyCore(BaseHTTPRequestHandler):
             """Decorator function to register routes."""
             Router.route(path, methods)(handler)
             return handler
-
         return decorator
 
     def do_GET(self):
@@ -42,14 +41,13 @@ class WebPyCore(BaseHTTPRequestHandler):
         except Exception as e:
             self.send_error(500, f"Internal Server Error: {str(e)}")
 
+    
     def handle_route_request(self, method, request):
         """Handle requests for registered routes."""
         try:
-            # Remove query parameters from the path for route matching
-            path_without_query = request.path.split('?', 1)[0]
-            handler_info = Router.get_route(path_without_query)
+            handler_info = Router.get_route(request.path)
             if handler_info:
-                allowed_methods = Router.get_allowed_methods(path_without_query)
+                allowed_methods = Router.get_allowed_methods(request.path)
                 if method in allowed_methods:
                     handler = handler_info['handler']
                     response = Response(self)
@@ -63,6 +61,7 @@ class WebPyCore(BaseHTTPRequestHandler):
                 self.send_error(404, "Not Found")
         except Exception as error:
             self.send_error(500, f"Internal Server Error: {str(error)}")
+
 
     def serve_static_file(self, path):
         """Serve static files."""
@@ -97,5 +96,5 @@ class WebPyCore(BaseHTTPRequestHandler):
             httpd = server_class(server_address, handler_class)
             print(f"Starting server on {server_address[0]}:{server_address[1]}")
             httpd.serve_forever()
-        except OSError as e:
-            print(f"Error starting server: {e}")
+        except OSError as error:
+            print(f"Error starting server: {error}")
