@@ -1,5 +1,5 @@
 import json
-from urllib.parse import urlparse, urldefrag, parse_qs
+from urllib.parse import parse_qs
 
 
 class Request:
@@ -41,28 +41,6 @@ class Request:
             dict: A dictionary containing the request headers.
         """
         return self.handler.headers
-
-    @property
-    def params(self):
-        """
-        Get the query parameters from the request URL.
-
-        Returns:
-            dict: A dictionary containing the query parameters.
-        """
-        parsed_url = urldefrag(self.path)
-        return parse_qs(parsed_url.fragment)
-
-    @property
-    def fragment(self):
-        """
-        Get the fragment from the request URL.
-
-        Returns:
-            str: The fragment from the request URL.
-        """
-        parsed_url = urlparse(self.path)
-        return parse_qs(parsed_url.fragment)
 
     def json(self):
         """
