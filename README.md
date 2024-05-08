@@ -1,6 +1,6 @@
 # WebPy
 
-WebPy is a compact Python micro-framework, simplifying web development with its minimalist approach. Build lightweight and efficient web applications effortlessly.
+WebPy is a experimental Python framework, simplifying web development with its minimalist approach. Build lightweight and efficient web applications effortlessly.
 
 ## Introduction
 
