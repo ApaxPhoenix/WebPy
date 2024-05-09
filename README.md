@@ -15,7 +15,7 @@ WebPy is designed to make web development quick and easy, with the flexibility t
 
 ## Getting Started
 
-To get started with MicroWeb, follow these simple steps:
+To get started with WebPy, follow these simple steps:
 
 1. Install WebPy using pip:
 
