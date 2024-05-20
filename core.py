@@ -1,8 +1,8 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
-from router import Router
-from broadcast import Request, Response
+from .router import Router
+from .broadcast import Request, Response
 
 
 class WebPyCore(BaseHTTPRequestHandler):
