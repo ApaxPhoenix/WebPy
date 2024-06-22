@@ -29,6 +29,10 @@ class WebPyCore(BaseHTTPRequestHandler):
         """Handle HTTP POST requests."""
         self.handle_request("POST")
 
+    def do_PUT(self):
+        """Handle HTTP PUT requests."""
+        self.handle_request("PUT")
+
     def do_DELETE(self):
         """Handle HTTP DELETE requests."""
         self.handle_request("DELETE")
@@ -41,7 +45,6 @@ class WebPyCore(BaseHTTPRequestHandler):
         except Exception as e:
             self.send_error(500, f"Internal Server Error: {str(e)}")
 
-    
     def handle_route_request(self, method, request):
         """Handle requests for registered routes."""
         try:
@@ -61,7 +64,6 @@ class WebPyCore(BaseHTTPRequestHandler):
                 self.send_error(404, "Not Found")
         except Exception as error:
             self.send_error(500, f"Internal Server Error: {str(error)}")
-
 
     def serve_static_file(self, path):
         """Serve static files."""
