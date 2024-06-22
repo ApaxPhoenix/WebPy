@@ -71,7 +71,7 @@ Get up and running with WebPy in just a few simple steps:
 
 ## Want to Contribute?
 
-WebPy is an open-source project driven by the community. Join us in shaping the future of web development with Python. Check out our [contribution guidelines](CONTRIBUTING.md) to get started.
+WebPy is a sole open-source project, in shaping the future of web development with Python. Check out our [contribution guidelines](CONTRIBUTING.md) to get started.
 
 ## Need Help?
 
