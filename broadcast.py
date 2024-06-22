@@ -18,7 +18,7 @@ class Request:
         Get the HTTP request method.
 
         Returns:
-            str: The HTTP request method (e.g., "GET", "POST").
+            str: The HTTP request method (e.g., "GET", "POST", "PUT", "DELETE").
         """
         return self.handler.command
 
