@@ -69,14 +69,6 @@ Get up and running with WebPy in just a few simple steps:
 
     Your WebPy application is now running at `http://127.0.0.1:8080/`.
 
-## Want to Contribute?
-
-WebPy is a sole open-source project, in shaping the future of web development with Python. Check out our [contribution guidelines](CONTRIBUTING.md) to get started.
-
-## Need Help?
-
-Have questions or need assistance with WebPy? Visit our [GitHub repository](https://github.com/webpy/webpy) or join our [community chat](https://discord.gg/webpy) for support.
-
 ## License
 
 WebPy is released under the GPL-3.0 License. See [LICENSE](LICENSE) for details.
