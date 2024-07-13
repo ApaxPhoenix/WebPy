@@ -7,7 +7,7 @@ WebPy is an experimental Python framework designed for streamlined web developme
 - **Minimalist Approach**: Focus on building your application without unnecessary complexity.
 - **Simple Structure**: Clean and straightforward setup for easy organization and maintenance.
 - **Flexible Dependencies**: Choose the dependencies that best suit your needs—no enforced packages.
-- **Scalable and Extensible**: Start small and scale up as your project grows. Easily extendable with community-provided extensions.
+- **Scalable and Extensible**: Start small and scale up as your project grows. Easily extendable with additional features as needed.
 
 ## Getting Started
 
