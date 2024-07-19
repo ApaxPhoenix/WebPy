@@ -54,7 +54,7 @@ class Request:
         return self.handler.headers
 
     @property
-    def query_params(self):
+    def queries(self):
         """
         Get the query parameters.
 
