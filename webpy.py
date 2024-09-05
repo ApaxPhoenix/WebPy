@@ -1,4 +1,4 @@
-from core import WebPyCore
+from .core import WebPyCore
 
 
 class WebPy:
