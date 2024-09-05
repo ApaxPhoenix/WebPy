@@ -1,6 +1,7 @@
 from typing import Callable, List, Optional
 from .core import WebPyCore
 
+
 class WebPy:
     def __init__(self) -> None:
         # Initialize WebPyCore as part of the WebPyApp
