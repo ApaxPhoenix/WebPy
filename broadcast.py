@@ -70,10 +70,10 @@ class Request:
         Returns:
             dict: The JSON data parsed from the request body.
         """
-        content_length = int(self.handler.headers.get('Content-Length', 0))
+        content_length = int(self.handler.headers.get("Content-Length", 0))
         if content_length:
             post_data = self.handler.rfile.read(content_length)
-            return json.loads(post_data.decode('utf-8'))
+            return json.loads(post_data.decode("utf-8"))
         return {}
 
 
@@ -88,7 +88,7 @@ class Response:
         self.handler = handler
         self.status_code = 200
         self.headers = {}
-        self.body = b''
+        self.body = b""
 
     def send(self):
         """
@@ -97,7 +97,7 @@ class Response:
         self.handler.send_response(self.status_code)
         for key, value in self.headers.items():
             self.handler.send_header(key, value)
-        self.handler.send_header('Content-Length', str(len(self.body)))
+        self.handler.send_header("Content-Length", str(len(self.body)))
         self.handler.end_headers()
         self.handler.wfile.write(self.body)
 
@@ -108,8 +108,8 @@ class Response:
         Args:
             data: The JSON data to be included in the response body.
         """
-        self.headers['Content-Type'] = 'application/json'
-        self.body = json.dumps(data).encode('utf-8')
+        self.headers["Content-Type"] = "application/json"
+        self.body = json.dumps(data).encode("utf-8")
         self.send()
 
     def api(self, data=None):
@@ -121,14 +121,14 @@ class Response:
         """
         method = self.handler.command
         context = {
-            'GET': lambda: (data if data is not None else {}, 200),
-            'POST': lambda: ({"message": "Resource created", "data": data} if data is not None else {"message": "Resource created"}, 201),
-            'PUT': lambda: ({"message": "Resource updated", "data": data} if data is not None else {"message": "Resource updated"}, 200),
-            'DELETE': lambda: ({"message": "Resource deleted"}, 204),
+            "GET": lambda: (data if data is not None else {}, 200),
+            "POST": lambda: ({"message": "Resource created", "data": data} if data is not None else {"message": "Resource created"}, 201),
+            "PUT": lambda: ({"message": "Resource updated", "data": data} if data is not None else {"message": "Resource updated"}, 200),
+            "DELETE": lambda: ({"message": "Resource deleted"}, 204),
         }
 
         response_data, status_code = context.get(method, lambda: ({"error": "Method not allowed"}, 405))()
         self.status_code = status_code
-        self.headers['Content-Type'] = 'application/json'
-        self.body = json.dumps(response_data).encode('utf-8')
+        self.headers["Content-Type"] = "application/json"
+        self.body = json.dumps(response_data).encode("utf-8")
         self.send()
