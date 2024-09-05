@@ -5,6 +5,7 @@ from jinja2 import Environment, FileSystemLoader
 from .router import Router
 from .broadcast import Request, Response
 
+
 class WebPyCore(BaseHTTPRequestHandler):
     """HTTP request handler with template rendering and static file serving."""
 
