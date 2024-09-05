@@ -1,26 +1,26 @@
+from typing import Callable, List, Optional
 from .core import WebPyCore
 
-
 class WebPy:
-    def __init__(self):
+    def __init__(self) -> None:
         # Initialize WebPyCore as part of the WebPyApp
-        self.app = WebPyCore
+        self.app: WebPyCore = WebPyCore
 
-    def route(self, path, methods=None):
+    def route(self, path: str, methods: Optional[List[str]] = None) -> Callable[[Callable], Callable]:
         """Decorator to register routes"""
         if methods is None:
-            methods = ['GET']
+            methods = ["GET"]
 
-        def decorator(handler):
+        def decorator(handler: Callable) -> Callable:
             """
             Decorator function to register routes.
 
             Args:
                 path (str): URL path to register the route.
-                methods (list, optional): List of HTTP methods allowed for the route.
+                methods (List[str], optional): List of HTTP methods allowed for the route.
 
             Returns:
-                function: Decorated handler function.
+                Callable: Decorated handler function.
                 :param handler: 
             """
             # Register the route with WebPyCore
@@ -28,7 +28,7 @@ class WebPy:
             return handler
         return decorator
 
-    def run(self, ip=None, port=None):
+    def run(self, ip: Optional[str] = None, port: Optional[int] = None) -> None:
         """
         Start the web application.
 
