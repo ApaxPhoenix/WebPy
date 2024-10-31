@@ -1,41 +1,56 @@
 from typing import Callable, List, Optional
-from .core import WebPyCore
+from core import WebPyCore
 
 
 class WebPy:
     def __init__(self) -> None:
-        # Initialize WebPyCore as part of the WebPyApp
+        """Initialize WebPyCore as part of the WebPy app."""
         self.app: WebPyCore = WebPyCore
 
     def route(self, path: str, methods: Optional[List[str]] = None) -> Callable[[Callable], Callable]:
-        """Decorator to register routes"""
+        """
+        Decorator to register routes for specific paths and methods.
+
+        Args:
+            path (str): URL path for the route.
+            methods (Optional[List[str]]): HTTP methods allowed for this route. Defaults to ["GET"].
+
+        Returns:
+            Callable: Decorated handler function.
+        """
         if methods is None:
             methods = ["GET"]
 
         def decorator(handler: Callable) -> Callable:
-            """
-            Decorator function to register routes.
-
-            Args:
-                path (str): URL path to register the route.
-                methods (List[str], optional): List of HTTP methods allowed for the route.
-
-            Returns:
-                Callable: Decorated handler function.
-                :param handler: 
-            """
-            # Register the route with WebPyCore
+            """Registers the route with WebPyCore."""
             self.app.route(path, methods)(handler)
             return handler
+
+        return decorator
+
+    def error(self, code: int) -> Callable[[Callable], Callable]:
+        """
+        Decorator to register custom error handlers for specific HTTP status codes.
+
+        Args:
+            code (int): HTTP status code (e.g., 404, 500) to handle.
+
+        Returns:
+            Callable: Decorated error handler function.
+        """
+        def decorator(handler: Callable) -> Callable:
+            """Registers the error handler with WebPyCore."""
+            self.app.error(code)(handler)
+            return handler
+
         return decorator
 
     def run(self, ip: Optional[str] = None, port: Optional[int] = None) -> None:
         """
-        Start the web application.
+        Start the web application server.
 
         Args:
             ip (str, optional): IP address to bind the server to. Defaults to '127.0.0.1'.
             port (int, optional): Port to listen on. Defaults to 8080.
         """
-        # Run the web application with specified IP and port
         self.app.run(ip=ip, port=port)

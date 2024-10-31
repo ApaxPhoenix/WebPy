@@ -2,67 +2,71 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Any
 from jinja2 import Environment, FileSystemLoader
-from .router import Router
-from .broadcast import Request, Response
+from router import Router
+from broadcast import Request, Response
 
 
 class WebPyCore(BaseHTTPRequestHandler):
-    """HTTP request handler with template rendering and static file serving."""
+    """Core HTTP request handler with integrated routing, template rendering,
+    static file serving, and customizable error handling for web applications."""
 
-    # Jinja2 environment for rendering templates from the 'templates' directory
+    # Jinja2 environment for rendering HTML templates
     template_env = Environment(loader=FileSystemLoader(Path("templates")))
 
-    # Directory for static files like CSS, JS, images, etc.
+    # Directory containing static files (CSS, JS, images, etc.)
     static_env = Path("static")
 
-    # MIME type mapping for various file extensions
+    # MIME types for commonly served files, mapped by file extensions
     MIME_TYPES: Dict[str, str] = {
-        # Text-based content types
-        ".html": "text/html",
-        ".css": "text/css",
-        ".js": "application/javascript",
-        ".txt": "text/plain",
-        # Application-based content types
-        ".json": "application/json",
-        ".xml": "application/xml",
-        ".pdf": "application/pdf",
-        ".zip": "application/zip",
-        # Image content types
-        ".png": "image/png",
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".gif": "image/gif",
-        ".svg": "image/svg+xml",
-        # Audio and video content types
-        ".mp3": "audio/mpeg",
-        ".ogg": "audio/ogg",
-        ".mp4": "video/mp4",
-        ".webm": "video/webm",
-        # Font content types
-        ".woff": "font/woff",
-        ".woff2": "font/woff2",
-        ".ttf": "font/ttf",
+        ".html": "text/html", ".css": "text/css", ".js": "application/javascript",
+        ".txt": "text/plain", ".json": "application/json", ".xml": "application/xml",
+        ".pdf": "application/pdf", ".zip": "application/zip", ".png": "image/png",
+        ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif",
+        ".svg": "image/svg+xml", ".mp3": "audio/mpeg", ".ogg": "audio/ogg",
+        ".mp4": "video/mp4", ".webm": "video/webm", ".woff": "font/woff",
+        ".woff2": "font/woff2", ".ttf": "font/ttf",
     }
+
+    # Stores custom error handlers for specific HTTP status codes
+    error_handlers: Dict[int, Callable[[Optional[Request], Response], None]] = {}
 
     @classmethod
     def route(cls, path: str, methods: Optional[List[str]] = None) -> Callable:
         """
-        Decorator to register routes.
+        Decorator for registering HTTP routes with specific paths and methods.
 
         Args:
-            path (str): URL path for the route.
-            methods (Optional[List[str]]): List of HTTP methods allowed for this route.
+            path (str): URL path pattern to register for the route.
+            methods (Optional[List[str]]): Allowed HTTP methods (e.g., GET, POST).
 
         Returns:
-            Callable: Decorated handler function.
+            Callable: The handler function decorated with routing capabilities.
         """
         if methods is None:
             methods = ["GET"]
 
         def decorator(handler: Callable) -> Callable:
-            # Register the route with the Router
             Router.route(path, methods)(handler)
             return handler
+
+        return decorator
+
+    @classmethod
+    def error(cls, code: int) -> Callable:
+        """
+        Decorator for assigning custom error handlers to HTTP status codes.
+
+        Args:
+            code (int): HTTP status code to handle (e.g., 404, 500).
+
+        Returns:
+            Callable: The error handler function registered for the specified code.
+        """
+
+        def decorator(handler: Callable) -> Callable:
+            cls.error_handlers[code] = handler
+            return handler
+
         return decorator
 
     def do_GET(self) -> None:
@@ -83,127 +87,115 @@ class WebPyCore(BaseHTTPRequestHandler):
 
     def handle_request(self, method: str) -> None:
         """
-        Handle HTTP requests by delegating to route-specific handlers.
+        Processes incoming HTTP requests, either serving static files
+        or routing requests based on URL and method.
 
         Args:
-            method (str): HTTP method of the request.
+            method (str): The HTTP method (e.g., GET, POST) of the request.
         """
         try:
-            # Create a Request object from the current handler
             request = Request(self)
-            # Route the request based on the HTTP method and path
-            self.handle_route_request(method, request)
-        except Exception as error:
-            # Send a 500 Internal Server Error response on exception
-            self.send_error(500, f"Internal Server Error: {str(error)}")
+            match = Router.match_route(request.path, method)
 
-    def handle_route_request(self, method: str, request: Request) -> None:
-        """
-        Handle requests for registered routes.
-
-        Args:
-            method (str): HTTP method of the request.
-            request (Request): Request object.
-        """
-        try:
-            # Get route information based on the request path
-            handler_info = Router.get_route(request.path)
-            if handler_info:
-                # Check if the method is allowed for this route
-                allowed_methods = Router.get_allowed_methods(request.path)
-                if method in allowed_methods:
-                    handler = handler_info["handler"]
-                    # Create a Response object to send back to the client
-                    response = Response(self)
-                    # Call the route handler with the request and response
-                    handler(request, response)
-                    # Send the response to the client
-                    response.send()
-                else:
-                    # Send a 405 Method Not Allowed response
-                    self.send_error(405, f"Method {method} not allowed")
+            if match:
+                # Route match found: execute handler function with route parameters
+                handler, params = match
+                response = Response(self)
+                handler(request, response, **params)
+                response.send()
             elif request.path.startswith("/static/"):
-                # Serve static files from the 'static' directory
+                # Serve static files if the path is within the 'static' directory
                 self.serve_static_file(request.path)
             else:
-                # Send a 404 Not Found response if no route matches
-                self.send_error(404, "Not Found")
+                # Serve a 404 if no route or static file match is found
+                self.serve(404, "Not Found")
         except Exception as error:
-            # Send a 500 Internal Server Error response on exception
-            self.send_error(500, f"Internal Server Error: {str(error)}")
+            # Handle internal errors (500) for exceptions
+            self.serve(500, f"Internal Server Error: {str(error)}")
 
     def serve_static_file(self, path: str) -> None:
         """
-        Serve static files with appropriate MIME types.
+        Serve static files (e.g., CSS, JS, images) with appropriate MIME types.
 
         Args:
-            path (str): Path to the static file.
+            path (str): URL path to the static file.
         """
-        relative_path = path[len("/static/"):]  # Strip '/static/' prefix
+        relative_path = path[len("/static/"):]  # Remove '/static/' prefix
         try:
-            # Construct the file path from the static directory
-            file_path = Path(self.static_env, relative_path)
+            file_path = self.static_env / relative_path
             with open(file_path, "rb") as file:
-                self.send_response(200)  # Send HTTP 200 OK status
-                content_type = self.get_mime_type(file_path)  # Determine MIME type
-                self.send_header("Content-type", content_type)
+                # Respond with file content and correct MIME type
+                self.send_response(200)
+                self.send_header("Content-type", self.get_mime_type(file_path))
                 self.end_headers()
-                # Write the file content to the response
                 self.wfile.write(file.read())
-        except FileNotFoundError:
-            # Send a 404 Not Found response if the file does not exist
-            self.send_error(404)
+        except Exception as error:
+            # Handle errors that occur when serving the static file
+            self.serve(500, f"Internal Server Error: {str(error)}")
 
     @classmethod
     def get_mime_type(cls, file_path: Path) -> str:
         """
-        Get the MIME type for a given file based on its extension.
+        Retrieve the appropriate MIME type based on file extension.
 
         Args:
             file_path (Path): Path object of the file.
 
         Returns:
-            str: MIME type string.
+            str: MIME type for the file or 'application/octet-stream' if unknown.
         """
-        # Return the MIME type from the mapping, or default to 'application/octet-stream'
         return cls.MIME_TYPES.get(file_path.suffix.lower(), "application/octet-stream")
 
     def render_template(self, template_name: str, **kwargs: Dict[str, Any]) -> str:
         """
-        Render a Jinja2 template with given context.
+        Renders an HTML template with given context data.
 
         Args:
-            template_name (str): Name of the template file.
-            **kwargs: Variables to pass to the template.
+            template_name (str): Filename of the template to render.
+            **kwargs: Key-value pairs representing variables for the template.
 
         Returns:
-            str: Rendered template as a string.
+            str: Rendered HTML content.
         """
-        # Load and render the template with provided context
         template = self.template_env.get_template(template_name)
         return template.render(**kwargs)
 
     @classmethod
-    def run(cls, ip: Optional[str] = None, port: Optional[int] = None, 
+    def run(cls, ip: Optional[str] = None, port: Optional[int] = None,
             server_class: type = ThreadingHTTPServer, handler_class: Optional[type] = None) -> None:
         """
-        Start the web server.
+        Start the HTTP server, binding it to a specified IP and port.
 
         Args:
-            ip (Optional[str]): IP address to bind to.
-            port (Optional[int]): Port number to listen on.
-            server_class (type): Class to use for the HTTP server.
-            handler_class (Optional[type]): Class to use for handling requests.
+            ip (Optional[str]): IP address to bind (default: 127.0.0.1).
+            port (Optional[int]): Port for the server (default: 8080).
+            server_class (type): Server class, defaulting to ThreadingHTTPServer.
+            handler_class (Optional[type]): Handler class for HTTP requests.
         """
         if handler_class is None:
             handler_class = cls
         try:
-            # Define the server address and port
             server_address = (ip or "127.0.0.1", port or 8080)
-            # Create and start the server
             httpd = server_class(server_address, handler_class)
             print(f"Starting server on {server_address[0]}:{server_address[1]}")
             httpd.serve_forever()
         except OSError as error:
-            # Print error if the server fails to start
             print(f"Error starting server: {error}")
+
+    def serve(self, code: int, message: str) -> None:
+        """
+        Handle error responses, leveraging custom error handlers if available.
+
+        Args:
+            code (int): HTTP status code (e.g., 404 for Not Found).
+            message (str): Error message to display in the response.
+        """
+        if code in self.error_handlers:
+            # Use registered custom error handler if available
+            response = Response(self)
+            handler = self.error_handlers[code]
+            handler(None, response)  # Pass None for request in error cases
+            response.send()
+        else:
+            # Default error response if no custom handler exists
+            self.send_error(code, message)
