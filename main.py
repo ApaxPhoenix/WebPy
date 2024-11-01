@@ -1,7 +1,19 @@
 from webpy import WebPy
+from middleware import Middleware
 
-# Instantiate the WebPyApp wrapper
+# Instantiate the WebPyApp wrapper and middleware
 web_app = WebPy()
+middleware = Middleware(web_app)
+
+# Define a logging middleware handler
+@middleware.register
+def log_request_handler(request, response):
+    """Log incoming request details."""
+    print(f"[REQUEST] {request.method} {request.path}")
+    if request.queries:  # Using queries instead of params
+        print(f"[QUERY PARAMS] {request.queries}")
+    # Can also log headers if needed
+    print(f"[HEADERS] {request.headers}")
 
 # Define a route with dynamic parameter <id:int>
 @web_app.route("/user/<id:int>", methods=['GET'])
@@ -12,6 +24,7 @@ def get_user(request, response, id: int):
 
 # Define another route with a string parameter <slug:str>
 @web_app.route("/post/<slug:str>", methods=['GET'])
+@middleware.run()  # This will run all registered handlers (currently just log_request_handler)
 def get_post(request, response, slug: str):
     # Respond with post information based on the provided slug
     response.headers['Content-Type'] = 'text/html'
