@@ -68,4 +68,4 @@ Setting up WebPy takes very few steps:
 
 ## License
 
-WebPy is published under the CC0-1.0 License. See [LICENSE](LICENSE) for details.
+WebPy is published under the MIT License. See [LICENSE](LICENSE) for details.
