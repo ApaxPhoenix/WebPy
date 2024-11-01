@@ -1,71 +1,71 @@
-# WebPy: Simplified Web Development in Python
+# WebPy: Pythonic Web Development
 
-WebPy is an experimental Python framework designed for streamlined web development. Build lightweight and efficient web applications effortlessly.
+WebPy : An experimental framework for fast web development in Python. Develop simple and responsive web apps with ease.
 
 ## Why Choose WebPy?
 
-- **Minimalist Approach**: Focus on building your application without unnecessary complexity.
-- **Simple Structure**: Clean and straightforward setup for easy organization and maintenance.
-- **Flexible Dependencies**: Choose the dependencies that best suit your needs—no enforced packages.
-- **Scalable and Extensible**: Start small and scale up as your project grows. Easily extendable with additional features as needed.
+- **Minimalistic**: Build your application with no unneeded bells and whistles.
+- **Simple Structure**: Clean and straightforward setup to ensure ease of organization and maintenance.
+- **Flexible Dependencies**: Use whatever other packages you like—none are mandated for you.
+- **Scalable & Extensible**: Start with a functioning project and scale up. Extensible by adding required features whenever needed.
 
 ## Getting Started
 
-Get up and running with WebPy in just a few simple steps:
+Setting up WebPy takes very few steps:
 
 1. **Installation**
 
-    Install WebPy using pip:
+   Install WebPy using pip:
 
-    ```bash
-    pip install webpy
-    ```
+   ```bash
+   pip install webpy
+   ```
 
 2. **Write Your Web Application**
 
-    Create a Python file (e.g., `app.py`) and start coding:
+   Create a Python file (`app.py`) and start coding:
 
-    ```python
-    from webpy import WebPy
+   ```python
+   from webpy import WebPy
 
-    # Instantiate the WebPyApp wrapper
-    web_app = WebPy()
+   # Creating the WebPyApp wrapper
+   web_app = WebPy()
 
-    # Define a route and corresponding handler function
-    @web_app.route("/hello", methods=['GET'])
-    def hello(request, response):
-        # Return a simple HTML page
-        html_content = """
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Hello Page</title>
-        </head>
-        <body>
-            <h1>Hello, World!</h1>
-        </body>
-        </html>
-        """
-        # Set the response content type to HTML
-        response.headers['Content-Type'] = 'text/html'
-        response.body = html_content.encode('utf-8')
+   # Define router and handler function
+   @web_app.route('/hello', methods=['GET'])
+   def hello(request, response):
+       # Return a simple HTML page
+       html_content = """
+       <!DOCTYPE html>
+       <html lang="en">
+       <head>
+           <meta charset="UTF-8">
+           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+           <title>Hello Page</title>
+       </head>
+       <body>
+           <h1>Hello, World!</h1>
+       </body>
+       </html>
+       """
+       # Set content type in response header
+       response.headers['Content-Type'] = 'text/html'
+       response.body = html_content.encode('utf-8')
 
-    # Run the application
-    web_app.run()
-    ```
+   # Run the application
+   web_app.run()
+   ```
 
 3. **Run Your Web Application**
 
-    Execute your script:
+   Execute your script:
 
-    ```bash
-    python app.py
-    ```
+   ```bash
+   python app.py
+   ```
 
-    Your WebPy application will be running at `http://127.0.0.1:8080/`.
+   Your application will be running on `http://127.0.0.1:8080/`, served by WebPy.
 
 ## License
 
-WebPy is released under the CC0-1.0 License. See [LICENSE](LICENSE) for details.
+WebPy is published under the CC0-1.0 License. See [LICENSE](LICENSE) for details.
