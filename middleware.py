@@ -41,13 +41,13 @@ class Middleware:
         Returns:
             Callable: The decorated function.
         """
-        def decorator(routing: Callable) -> Callable:
-            @wraps(routing)
+        def decorator(object: Callable) -> Callable:
+            @wraps(object)
             def wrapper(request: Request, response: Response, *args, **kwargs):
                 # Run either specified handlers or all registered handlers
                 pipeline = handlers if handlers is not None else self.handlers
                 for handler in pipeline:
                     handler(request, response)
-                return routing(request, response, *args, **kwargs)
+                return object(request, response, *args, **kwargs)
             return wrapper
         return decorator
