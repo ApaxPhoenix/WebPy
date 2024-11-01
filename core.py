@@ -16,8 +16,8 @@ class WebPyCore(BaseHTTPRequestHandler):
     # Directory containing static files (CSS, JS, images, etc.)
     static_env = Path("static")
 
-    # MIME types for commonly served files, mapped by file extensions
-    MIME_TYPES: Dict[str, str] = {
+    # Mime types for commonly served files, mapped by file extensions
+    mime_types: Dict[str, str] = {
         ".html": "text/html", ".css": "text/css", ".js": "application/javascript",
         ".txt": "text/plain", ".json": "application/json", ".xml": "application/xml",
         ".pdf": "application/pdf", ".zip": "application/zip", ".png": "image/png",
@@ -69,23 +69,7 @@ class WebPyCore(BaseHTTPRequestHandler):
 
         return decorator
 
-    def do_GET(self) -> None:
-        """Handle HTTP GET requests."""
-        self.handle_request("GET")
-
-    def do_POST(self) -> None:
-        """Handle HTTP POST requests."""
-        self.handle_request("POST")
-
-    def do_PUT(self) -> None:
-        """Handle HTTP PUT requests."""
-        self.handle_request("PUT")
-
-    def do_DELETE(self) -> None:
-        """Handle HTTP DELETE requests."""
-        self.handle_request("DELETE")
-
-    def handle_request(self, method: str) -> None:
+    def serve_http_request(self, method: str) -> None:
         """
         Processes incoming HTTP requests, either serving static files
         or routing requests based on URL and method.
@@ -104,8 +88,8 @@ class WebPyCore(BaseHTTPRequestHandler):
                 handler(request, response, **params)
                 response.send()
             elif request.path.startswith("/static/"):
-                # Serve static files if the path is within the 'static' directory
-                self.serve_static_file(request.path)
+                # Serve static files if the path is within the "static" directory
+                self.serve_static_files(request.path)
             else:
                 # Serve a 404 if no route or static file match is found
                 self.serve(404, "Not Found")
@@ -113,51 +97,40 @@ class WebPyCore(BaseHTTPRequestHandler):
             # Handle internal errors (500) for exceptions
             self.serve(500, f"Internal Server Error: {str(error)}")
 
-    def serve_static_file(self, path: str) -> None:
+    def serve_static_files(self, path: str) -> None:
         """
         Serve static files (e.g., CSS, JS, images) with appropriate MIME types.
 
         Args:
             path (str): URL path to the static file.
         """
-        relative_path = path[len("/static/"):]  # Remove '/static/' prefix
+        relative_path = path[len("/static/"):]  # Remove "/static/" prefix
         try:
             file_path = self.static_env / relative_path
             with open(file_path, "rb") as file:
                 # Respond with file content and correct MIME type
                 self.send_response(200)
-                self.send_header("Content-type", self.get_mime_type(file_path))
+                # Retrieve the appropriate MIME type based on file extension.
+                self.send_header("Content-type", self.mime_types.get(file_path.suffix.lower(), "application/octet-stream"))
                 self.end_headers()
                 self.wfile.write(file.read())
         except Exception as error:
             # Handle errors that occur when serving the static file
             self.serve(500, f"Internal Server Error: {str(error)}")
 
-    @classmethod
-    def get_mime_type(cls, file_path: Path) -> str:
-        """
-        Retrieve the appropriate MIME type based on file extension.
-
-        Args:
-            file_path (Path): Path object of the file.
-
-        Returns:
-            str: MIME type for the file or 'application/octet-stream' if unknown.
-        """
-        return cls.MIME_TYPES.get(file_path.suffix.lower(), "application/octet-stream")
-
-    def render_template(self, template_name: str, **kwargs: Dict[str, Any]) -> str:
+    @staticmethod
+    def render_template(filename: str, **kwargs: Dict[str, Any]) -> str:
         """
         Renders an HTML template with given context data.
 
         Args:
-            template_name (str): Filename of the template to render.
+            filename (str): Filename of the template to render.
             **kwargs: Key-value pairs representing variables for the template.
 
         Returns:
             str: Rendered HTML content.
         """
-        template = self.template_env.get_template(template_name)
+        template = WebPyCore.template_env.get_template(filename)
         return template.render(**kwargs)
 
     @classmethod

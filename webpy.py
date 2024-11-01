@@ -1,11 +1,11 @@
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Dict, Any, Type
 from core import WebPyCore
 
 
 class WebPy:
     def __init__(self) -> None:
         """Initialize WebPyCore as part of the WebPy app."""
-        self.app: WebPyCore = WebPyCore
+        self.app: Type[WebPyCore] = WebPyCore
 
     def route(self, path: str, methods: Optional[List[str]] = None) -> Callable[[Callable], Callable]:
         """
@@ -44,6 +44,19 @@ class WebPy:
             return handler
 
         return decorator
+
+    def render_template(self, filename: str, **kwargs: Dict[str, Any]) -> str:
+        """
+        Renders an HTML template using the WebPyCore's template environment.
+
+        Args:
+            filename (str): Filename of the template to render.
+            **kwargs: Key-value pairs representing variables for the template.
+
+        Returns:
+            str: Rendered HTML content.
+        """
+        return self.app.render_template(filename, **kwargs)
 
     def run(self, ip: Optional[str] = None, port: Optional[int] = None) -> None:
         """

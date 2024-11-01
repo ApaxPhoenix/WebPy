@@ -26,11 +26,11 @@ class Sessions:
         """
         # Create a new cookie
         self.cookies[name] = value
-        self.cookies[name]['path'] = path
+        self.cookies[name]["path"] = path
         if secure:
-            self.cookies[name]['secure'] = True
+            self.cookies[name]["secure"] = True
         if expires:
-            self.cookies[name]['expires'] = expires
+            self.cookies[name]["expires"] = expires
 
     def get(self, name: str) -> Optional[str]:
         """
@@ -49,7 +49,7 @@ class Sessions:
 
     def update(self, name: str, value: str) -> bool:
         """
-        Update an existing cookie's value.
+        Update an existing cookie"s value.
 
         Args:
             name (str): The name of the cookie.
