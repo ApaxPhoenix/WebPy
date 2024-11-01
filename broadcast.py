@@ -10,8 +10,6 @@ class Request:
 
     Attributes:
         handler (BaseHTTPRequestHandler): The HTTP request handler.
-        _parsed_url (ParseResult): Parsed components of the request URL.
-        _query_params (dict): Query parameters parsed from the URL.
     """
 
     def __init__(self, handler: BaseHTTPRequestHandler) -> None:
@@ -22,8 +20,8 @@ class Request:
             handler (BaseHTTPRequestHandler): The HTTP request handler.
         """
         self.handler = handler
-        self._parsed_url = urlparse(self.handler.path)
-        self._query_params = parse_qs(self._parsed_url.query)
+        self.parsing = urlparse(self.handler.path)
+        self.queries = parse_qs(self.parsing.query)
 
     @property
     def method(self) -> str:
@@ -43,7 +41,7 @@ class Request:
         Returns:
             str: The request path.
         """
-        return self._parsed_url.path
+        return self.parsing.path
 
     @property
     def fragment(self) -> str:
@@ -53,7 +51,7 @@ class Request:
         Returns:
             str: The URL fragment.
         """
-        return self._parsed_url.fragment
+        return self.parsing.fragment
 
     @property
     def headers(self) -> Dict[str, str]:
@@ -73,7 +71,7 @@ class Request:
         Returns:
             dict: A dictionary of query parameters parsed from the URL.
         """
-        return self._query_params
+        return self.queries
 
     def json(self):
         """
