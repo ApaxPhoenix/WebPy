@@ -119,7 +119,7 @@ class WebPyCore(BaseHTTPRequestHandler):
             self.serve(500, f"Internal Server Error: {str(error)}")
 
     @staticmethod
-    def render_template(filename: str, **kwargs: Dict[str, Any]) -> str:
+    def render(filename: str, **kwargs: Dict[str, Any]) -> str:
         """
         Renders an HTML template with given context data.
 
