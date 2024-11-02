@@ -106,7 +106,7 @@ class WebPyCore(BaseHTTPRequestHandler):
         """
         relative_path = path[len("/static/"):]  # Remove "/static/" prefix
         try:
-            file_path = self.static_env / relative_path
+            file_path = Path(self.static_env, relative_path)
             with open(file_path, "rb") as file:
                 # Respond with file content and correct MIME type
                 self.send_response(200)
