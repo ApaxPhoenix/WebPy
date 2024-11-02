@@ -150,6 +150,7 @@ class WebPyCore(BaseHTTPRequestHandler):
         try:
             server_address = (ip or "127.0.0.1", port or 8080)
             httpd = server_class(server_address, handler_class)
+            print(f"Starting server on {server_address[0]}:{server_address[1]}")
             httpd.serve_forever()
         except OSError as error:
             print(f"Error starting server: {error}")
