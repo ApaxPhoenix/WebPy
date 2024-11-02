@@ -80,7 +80,7 @@ class Request:
         Returns:
             Optional[dict]: The JSON data parsed from the request body, or None if no data is present.
         """
-        content = int(self.handler.headers.get("Content-Length", "0"))
+        content = self.handler.headers.get("Content-Length", "0")
         print(content)
         if content and content is not "0":
             post_data = self.handler.rfile.read(content)
