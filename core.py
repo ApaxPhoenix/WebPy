@@ -30,6 +30,18 @@ class WebPyCore(BaseHTTPRequestHandler):
     # Stores custom error handlers for specific HTTP status codes
     error_handlers: Dict[int, Callable[[Optional[Request], Response], None]] = {}
 
+    def do_GET(self):
+        self.serve_http_request("GET")
+
+    def do_POST(self):
+        self.serve_http_request("POST")
+
+    def do_PUT(self):
+        self.serve_http_request("PUT")
+
+    def do_DELETE(self):
+        self.serve_http_request("DELETE")
+
     @classmethod
     def route(cls, path: str, methods: Optional[List[str]] = None) -> Callable:
         """

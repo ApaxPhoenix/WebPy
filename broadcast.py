@@ -21,7 +21,7 @@ class Request:
         """
         self.handler = handler
         self.parsing = urlparse(self.handler.path)
-        self.queries = parse_qs(self.parsing.query)
+        self.querier = parse_qs(self.parsing.query)
 
     @property
     def method(self) -> str:
@@ -71,7 +71,7 @@ class Request:
         Returns:
             dict: A dictionary of query parameters parsed from the URL.
         """
-        return self.queries
+        return self.querier
 
     def json(self):
         """
@@ -80,11 +80,10 @@ class Request:
         Returns:
             Optional[dict]: The JSON data parsed from the request body, or None if no data is present.
         """
-        content = self.handler.headers.get("Content-Length", "0")
-        print(content)
-        if content and content is not "0":
-            post_data = self.handler.rfile.read(content)
-            return json.loads(post_data.decode("utf-8"))
+        content = int(self.handler.headers.get("Content-Length", "0"))
+        if content and content != 0:
+            data = self.handler.rfile.read(content)
+            return json.loads(data.decode("utf-8"))
         return {}
 
 
