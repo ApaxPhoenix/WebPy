@@ -45,7 +45,7 @@ class WebPy:
 
         return decorator
 
-    def render_template(self, filename: str, **kwargs: Dict[str, Any]) -> str:
+    def render(self, filename: str, **kwargs: Dict[str, Any]) -> str:
         """
         Renders an HTML template using the WebPyCore's template environment.
 
@@ -56,7 +56,7 @@ class WebPy:
         Returns:
             str: Rendered HTML content.
         """
-        return self.app.render_template(filename, **kwargs)
+        return self.app.render(filename, **kwargs)
 
     def run(self, ip: Optional[str] = None, port: Optional[int] = None) -> None:
         """
