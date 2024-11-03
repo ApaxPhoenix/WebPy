@@ -7,17 +7,19 @@ from broadcast import Request, Response
 
 
 class WebPyCore(BaseHTTPRequestHandler):
-    """Core HTTP request handler with integrated routing, template rendering,
-    static file serving, and customizable error handling for web applications."""
+    """
+    Core HTTP request handler with integrated routing, template rendering,
+    static file serving, and customizable error handling for web applications.
+    """
 
-    # Jinja2 environment for rendering HTML templates
+    # Jinja2 environment for rendering HTML templates from the 'templates' directory
     template_env = Environment(loader=FileSystemLoader(Path("templates")))
 
-    # Directory containing static files (CSS, JS, images, etc.)
+    # Directory containing static files (e.g., CSS, JS, images)
     static_env = Path("static")
 
-    # Mime types for commonly served files, mapped by file extensions
-    mime_types: Dict[str, str] = {
+    # MIME types for commonly served files, mapped by file extensions
+    mimes: Dict[str, str] = {
         ".html": "text/html", ".css": "text/css", ".js": "application/javascript",
         ".txt": "text/plain", ".json": "application/json", ".xml": "application/xml",
         ".pdf": "application/pdf", ".zip": "application/zip", ".png": "image/png",
@@ -28,18 +30,22 @@ class WebPyCore(BaseHTTPRequestHandler):
     }
 
     # Stores custom error handlers for specific HTTP status codes
-    error_handlers: Dict[int, Callable[[Optional[Request], Response], None]] = {}
+    errors: Dict[int, Callable[[Optional[Request], Response], None]] = {}
 
     def do_GET(self):
+        """Handle HTTP GET requests by calling the generic serve_http_request method."""
         self.serve_http_request("GET")
 
     def do_POST(self):
+        """Handle HTTP POST requests by calling the generic serve_http_request method."""
         self.serve_http_request("POST")
 
     def do_PUT(self):
+        """Handle HTTP PUT requests by calling the generic serve_http_request method."""
         self.serve_http_request("PUT")
 
     def do_DELETE(self):
+        """Handle HTTP DELETE requests by calling the generic serve_http_request method."""
         self.serve_http_request("DELETE")
 
     @classmethod
@@ -58,6 +64,7 @@ class WebPyCore(BaseHTTPRequestHandler):
             methods = ["GET"]
 
         def decorator(handler: Callable) -> Callable:
+            # Register the handler with the Router for the specified path and methods
             Router.route(path, methods)(handler)
             return handler
 
@@ -76,7 +83,8 @@ class WebPyCore(BaseHTTPRequestHandler):
         """
 
         def decorator(handler: Callable) -> Callable:
-            cls.error_handlers[code] = handler
+            # Register the handler for a specific HTTP error code
+            cls.errors[code] = handler
             return handler
 
         return decorator
@@ -90,6 +98,7 @@ class WebPyCore(BaseHTTPRequestHandler):
             method (str): The HTTP method (e.g., GET, POST) of the request.
         """
         try:
+            # Create Request and match it against registered routes
             request = Request(self)
             match = Router.match_route(request.path, method)
 
@@ -116,14 +125,14 @@ class WebPyCore(BaseHTTPRequestHandler):
         Args:
             path (str): URL path to the static file.
         """
-        relative_path = path[len("/static/"):]  # Remove "/static/" prefix
+        # Strip "/static/" from path to get relative file path
+        relative_path = path[len("/static/"):]
         try:
             file_path = Path(self.static_env, relative_path)
             with open(file_path, "rb") as file:
-                # Respond with file content and correct MIME type
+                # Send response with file content and correct MIME type
                 self.send_response(200)
-                # Retrieve the appropriate MIME type based on file extension.
-                self.send_header("Content-type", self.mime_types.get(file_path.suffix.lower(), "application/octet-stream"))
+                self.send_header("Content-type", self.mimes.get(file_path.suffix.lower(), "application/octet-stream"))
                 self.end_headers()
                 self.wfile.write(file.read())
         except Exception as error:
@@ -142,29 +151,31 @@ class WebPyCore(BaseHTTPRequestHandler):
         Returns:
             str: Rendered HTML content.
         """
+        # Load and render the specified template with provided context
         template = WebPyCore.template_env.get_template(filename)
         return template.render(**kwargs)
 
     @classmethod
     def run(cls, ip: Optional[str] = None, port: Optional[int] = None,
-            server_class: type = ThreadingHTTPServer, handler_class: Optional[type] = None) -> None:
+            server: type = ThreadingHTTPServer, handler: Optional[type] = None) -> None:
         """
         Start the HTTP server, binding it to a specified IP and port.
 
         Args:
             ip (Optional[str]): IP address to bind (default: 127.0.0.1).
             port (Optional[int]): Port for the server (default: 8080).
-            server_class (type): Server class, defaulting to ThreadingHTTPServer.
-            handler_class (Optional[type]): Handler class for HTTP requests.
+            server (type): Server class, defaulting to ThreadingHTTPServer.
+            handler (Optional[type]): Handler class for HTTP requests.
         """
-        if handler_class is None:
-            handler_class = cls
+        if handler is None:
+            handler = cls
         try:
-            server_address = (ip or "127.0.0.1", port or 8080)
-            httpd = server_class(server_address, handler_class)
-            print(f"Starting server on {server_address[0]}:{server_address[1]}")
-            httpd.serve_forever()
+            # Initialize and start the server on the specified IP and port
+            host = server((ip, port), handler)
+            print(f"Starting server on {ip}:{port}")
+            host.serve_forever()
         except OSError as error:
+            # Output error message if server fails to start
             print(f"Error starting server: {error}")
 
     def serve(self, code: int, message: str) -> None:
@@ -175,10 +186,10 @@ class WebPyCore(BaseHTTPRequestHandler):
             code (int): HTTP status code (e.g., 404 for Not Found).
             message (str): Error message to display in the response.
         """
-        if code in self.error_handlers:
+        if code in self.errors:
             # Use registered custom error handler if available
             response = Response(self)
-            handler = self.error_handlers[code]
+            handler = self.errors[code]
             handler(None, response)  # Pass None for request in error cases
             response.send()
         else:

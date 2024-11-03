@@ -5,11 +5,11 @@ from typing import Callable, Dict, List, Optional, Union, Tuple, Pattern
 class Router:
     """
     A simple router class that registers routes and matches them based on
-    path and HTTP method using regular expressions.
+    the path and HTTP method using regular expressions.
 
     Attributes:
         routes (Dict[str, Dict[str, Union[Callable, List[str], Pattern]]]):
-            A dictionary to store routes, handlers, allowed methods, and compiled regex patterns.
+            A dictionary to store routes, their handlers, allowed methods, and compiled regex patterns.
     """
     routes: Dict[str, Dict[str, Union[Callable, List[str], Pattern]]] = {}
 
@@ -26,11 +26,11 @@ class Router:
             Callable[[Callable], Callable]: A decorator function that registers the handler for the route.
         """
         if methods is None:
-            methods = ["GET"]
+            methods = ["GET"]  # Default to GET if no methods are provided
 
-        # Convert dynamic path segments to regex patterns for parameter extraction
+        # Convert dynamic path segments like <id:int> to regex patterns for parameter extraction
         pattern = re.sub(r"<(\w+):(\w+)>", r"(?P<\1>[^/]+)", path)
-        regex: Pattern = re.compile(f"^{pattern}$")
+        regex: Pattern = re.compile(f"^{pattern}$")  # Compile the pattern into a regex
 
         def decorator(handler: Callable) -> Callable:
             """
@@ -49,7 +49,7 @@ class Router:
                 "methods": methods,
                 "pattern": regex
             }
-            return handler
+            return handler  # Return the original handler function
 
         return decorator
 
@@ -70,13 +70,13 @@ class Router:
         # Iterate over all registered routes to find a matching path and method
         for route in cls.routes.values():
             pattern: Pattern = route.get("pattern")
-            allowed_methods = route.get("methods", ["GET"])
+            allowed_methods = route.get("methods", ["GET"])  # Default to GET if no methods are specified
 
             # Check if the route pattern matches the path and method is allowed
             if pattern and pattern.match(path) and method in allowed_methods:
                 handler = route["handler"]
                 match = pattern.match(path)
-                params = match.groupdict() if match else {}
+                params = match.groupdict() if match else {}  # Extract parameters from the path if present
                 return handler, params  # Return the matched handler and extracted parameters
 
         return None  # Return None if no match is found
