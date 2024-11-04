@@ -1,6 +1,6 @@
 # WebPy: Pythonic Web Development
 
-WebPy : An experimental framework for fast web development in Python. Develop simple and responsive web apps with ease.
+An experimental framework for fast web development in Python. Develop simple and responsive web apps with ease.
 
 ## Why Choose WebPy?
 
