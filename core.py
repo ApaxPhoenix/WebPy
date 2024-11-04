@@ -1,9 +1,11 @@
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Any
+from typing import Callable, Dict, List, Optional, Any, Type
 from jinja2 import Environment, FileSystemLoader
 from router import Router
 from broadcast import Request, Response
+import ssl
+import warnings
 
 
 class WebPyCore(BaseHTTPRequestHandler):
@@ -12,7 +14,7 @@ class WebPyCore(BaseHTTPRequestHandler):
     static file serving, and customizable error handling for web applications.
     """
 
-    # Jinja2 environment for rendering HTML templates from the 'templates' directory
+    # Jinja2 environment for rendering HTML templates from the "templates" directory
     template_env = Environment(loader=FileSystemLoader(Path("templates")))
 
     # Directory containing static files (e.g., CSS, JS, images)
@@ -135,9 +137,11 @@ class WebPyCore(BaseHTTPRequestHandler):
                 self.send_header("Content-type", self.mimes.get(file_path.suffix.lower(), "application/octet-stream"))
                 self.end_headers()
                 self.wfile.write(file.read())
+        except FileNotFoundError:
+            self.serve(404, "File Not Found")
         except Exception as error:
-            # Handle errors that occur when serving the static file
-            self.serve(500, f"Internal Server Error: {str(error)}")
+            warnings.warn(f"Error serving static file {path}: {error}")
+            self.serve(500, "Internal Server Error")
 
     @staticmethod
     def render(filename: str, **kwargs: Dict[str, Any]) -> str:
@@ -156,27 +160,46 @@ class WebPyCore(BaseHTTPRequestHandler):
         return template.render(**kwargs)
 
     @classmethod
-    def run(cls, ip: Optional[str] = None, port: Optional[int] = None,
-            server: type = ThreadingHTTPServer, handler: Optional[type] = None) -> None:
+    def run(cls, ip: str = '127.0.0.1', port: int = 8080,
+            server: Type[ThreadingHTTPServer] = ThreadingHTTPServer,
+            handler: Optional[Type] = None,
+            certfile: Optional[str] = None, keyfile: Optional[str] = None) -> None:
         """
-        Start the HTTP server, binding it to a specified IP and port.
+        Start the server, with optional HTTPS if both certfile and keyfile are provided.
 
         Args:
-            ip (Optional[str]): IP address to bind (default: 127.0.0.1).
-            port (Optional[int]): Port for the server (default: 8080).
+            ip (str): IP address to bind (default: 127.0.0.1).
+            port (int): Port for the server (default: 8080).
             server (type): Server class, defaulting to ThreadingHTTPServer.
             handler (Optional[type]): Handler class for HTTP requests.
+            certfile (Optional[str]): Path to the SSL certificate file.
+            keyfile (Optional[str]): Path to the SSL key file.
         """
         if handler is None:
             handler = cls
+
+        # Initialize server with the specified handler
+        host = server((ip, port), handler)
+
+        # Warn and exit if only one of certfile or keyfile is provided
+        if (certfile and not keyfile) or (keyfile and not certfile):
+            warnings.warn("Both certfile and keyfile are required for HTTPS to work.", UserWarning)
+            return
+
+        # Setup SSL context if both certfile and keyfile are provided
+        if certfile and keyfile:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(certfile=certfile, keyfile=keyfile)
+            host.socket = context.wrap_socket(host.socket, server_side=True)
+            print(f"Starting HTTPS server on {ip}:{port}")
+        else:
+            print(f"Starting HTTP server on {ip}:{port}")
+
         try:
-            # Initialize and start the server on the specified IP and port
-            host = server((ip, port), handler)
-            print(f"Starting server on {ip}:{port}")
             host.serve_forever()
         except OSError as error:
-            # Output error message if server fails to start
-            print(f"Error starting server: {error}")
+            warnings.warn(f"Error starting server: {error}")
+            raise
 
     def serve(self, code: int, message: str) -> None:
         """
