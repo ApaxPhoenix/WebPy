@@ -324,7 +324,7 @@ class Cache:
                 # Try to get cached result
                 result = self.get(cachekey)
                 if result is None:
-                    # Cache miss - execute function and store result
+                    # Cache miss
                     result = func(*args, **kwargs)
                     self.set(cachekey, result, expiry)
                 return result
