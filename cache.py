@@ -1,52 +1,53 @@
-from typing import Callable, Optional, Dict, Any
-import time
+import json
+import pathlib
 import functools
-from webpy import WebPy
+from typing import Callable, Dict, Any
+import appdirs
+import time
 
 
 # Base Cache class to define the interface
 class BaseCache:
     """
-    Abstract BaseCache class that defines the required cache operations.
-    This class provides a blueprint for cache implementations (like MemoryCache, FileSystemCache).
-    Subclasses must implement all methods defined here.
+    Abstract BaseCache class defining the required cache operations.
+    Subclasses must implement all methods to ensure functionality.
     """
 
-    def set(self, key: str, value: Any, timeout: Optional[int] = None) -> None:
+    def set(self, cache_key: str, cache_value: Any, cache_timeout: int = 300) -> None:
         """
-        Set a value in the cache associated with a specific key.
+        Store a value in the cache with an expiration time.
 
         Args:
-            key (str): Cache key to store the value.
-            value (Any): The value to store in the cache.
-            timeout (Optional[int]): Optional expiration time in seconds for the cache entry.
+            cache_key: Unique identifier for the cache item.
+            cache_value: Data to store in the cache.
+            cache_timeout: Time in seconds until the cache expires (default is 300).
         """
         raise NotImplementedError
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, cache_key: str) -> Any:
         """
-        Retrieve a cached value by its key.
+        Retrieve a value from the cache by its key.
 
         Args:
-            key (str): The cache key to look up the value.
+            cache_key: Unique identifier for the cache item.
 
         Returns:
-            Optional[Any]: The cached value if it exists and hasn't expired, otherwise None.
+            The cached value if it exists and hasn't expired, otherwise None.
         """
         raise NotImplementedError
 
-    def delete(self, key: str) -> None:
+    def delete(self, cache_key: str) -> None:
         """
-        Remove a cached entry by its key.
+        Remove a specific cache entry by its key.
 
         Args:
-            key (str): The cache key to delete.
+            cache_key: Unique identifier for the cache item.
         """
         raise NotImplementedError
 
     def clear(self) -> None:
         """
-        Clear all cache entries. Effectively resets the cache.
+        Remove all items from the cache.
         """
         raise NotImplementedError
 
@@ -54,242 +55,165 @@ class BaseCache:
 # In-memory cache implementation
 class MemoryCache(BaseCache):
     """
-    A simple memory-based cache implementation that stores values in an internal dictionary.
-
-    Attributes:
-        cache (dict): Internal dictionary to store cache entries with keys, values, and expiration times.
+    Simple in-memory cache that stores data in a Python dictionary.
     """
 
     def __init__(self) -> None:
         """
-        Initialize the MemoryCache instance.
+        Initialize an internal dictionary for cache storage.
         """
-        # Cache dictionary to hold cached entries. Each entry has a value and an expiration timestamp.
-        self.cache: Dict[str, Dict[str, Any]] = {}
+        self.memory_cache: Dict[str, Dict[str, Any]] = {}
 
-    def set(self, key: str, value: Any, timeout: Optional[int] = None) -> None:
+    def set(self, cache_key: str, cache_value: Any, cache_timeout: int = 300) -> None:
         """
-        Store a value in the cache with an optional expiration timeout.
-        If the timeout is not provided, the default expiration time of 300 seconds (5 minutes) is used.
-
-        Args:
-            key (str): Cache key to associate with the stored value.
-            value (Any): Value to be cached.
-            timeout (Optional[int]): Optional expiration time in seconds. Defaults to 300 if not provided.
+        Store a value in the memory cache with an expiration time.
         """
-        # If no timeout is specified, use the default of 300 seconds.
-        effective_timeout = timeout if timeout is not None else 300
-        # Cache the value and store its expiration time.
-        self.cache[key] = {
-            "value": value,
-            "expires_at": time.time() + effective_timeout  # Calculate when the cache entry will expire.
+        self.memory_cache[cache_key] = {
+            "value": cache_value,
+            "expires": time.time() + cache_timeout  # Expiration timestamp
         }
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, cache_key: str) -> Any:
         """
-        Retrieve a value from the cache if it exists and hasn't expired.
-
-        Args:
-            key (str): The cache key to retrieve the value.
-
-        Returns:
-            Optional[Any]: The cached value if it exists and is still valid, otherwise None.
+        Retrieve a value from the memory cache if it exists and hasn't expired.
         """
-        # Try to get the cached item.
-        item = self.cache.get(key)
-        # Check if the item exists and hasn't expired yet.
-        if item and time.time() < item["expires_at"]:
-            return item["value"]  # Return the cached value if valid.
+        cache_item = self.memory_cache.get(cache_key)
+        if cache_item and time.time() < cache_item["expires"]:
+            return cache_item["value"]
+        self.memory_cache.pop(cache_key, None)  # Remove expired or missing entry
+        return None
 
-        # Automatically remove the item if it's expired.
-        self.cache.pop(key, None)
-        return None  # Return None if no valid entry exists.
-
-    def delete(self, key: str) -> None:
+    def delete(self, cache_key: str) -> None:
         """
-        Delete a cache entry by its key.
-
-        Args:
-            key (str): The cache key to remove.
+        Delete a specific cache entry by its key.
         """
-        # Remove the entry from the cache dictionary.
-        self.cache.pop(key, None)
+        self.memory_cache.pop(cache_key, None)
 
     def clear(self) -> None:
         """
-        Clear all entries in the cache, effectively resetting it.
+        Clear all entries in the memory cache.
         """
-        # Clear the entire cache dictionary.
-        self.cache.clear()
+        self.memory_cache.clear()
 
 
-# Filesystem cache implementation (not implemented yet)
+# Filesystem cache implementation
 class FileSystemCache(BaseCache):
     """
-    A placeholder for a filesystem-based cache implementation.
-    This would persist cache entries to the filesystem.
-
-    Args:
-        dispatch (str): Directory path where cache files should be stored.
+    Filesystem-based cache storing data as JSON files in a specified directory.
     """
 
-    def __init__(self, dispatch: str) -> None:
+    def __init__(self, cache_directory: str = None) -> None:
         """
-        Initialize the FileSystemCache with the path where cache entries should be stored.
-        """
-        # Store the directory path for future use (not yet implemented).
-        self.dispatch = dispatch
+        Initialize the filesystem cache.
 
-    def set(self, key: str, value: Any, timeout: Optional[int] = None) -> None:
+        Args:
+            cache_directory: Path to the cache directory (defaults to appdirs' user cache directory).
         """
-        Store a value in the cache with an optional expiration timeout.
-        This method is not implemented yet.
-        """
-        raise NotImplementedError("FileSystemCache not implemented yet.")
+        self.cache_directory = pathlib.Path(cache_directory or appdirs.user_cache_dir())
+        self.cache_directory.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
 
-    def get(self, key: str) -> Optional[Any]:
+    def set(self, cache_key: str, cache_value: Any, cache_timeout: int = 300) -> None:
         """
-        Retrieve a value from the cache by its key.
-        This method is not implemented yet.
+        Store a value in the filesystem cache with an expiration time.
         """
-        raise NotImplementedError("FileSystemCache not implemented yet.")
+        file_path = pathlib.Path(self.cache_directory, f"{cache_key}.json")
+        expires = time.time() + cache_timeout
+        cache_entry = {"value": cache_value, "expires": expires}
+        with open(file_path, "w") as file:
+            json.dump(cache_entry, file)
 
-    def delete(self, key: str) -> None:
+    def get(self, cache_key: str) -> Any:
         """
-        Delete a cache entry by its key.
-        This method is not implemented yet.
+        Retrieve a value from the filesystem cache if it exists and hasn't expired.
         """
-        raise NotImplementedError("FileSystemCache not implemented yet.")
+        file_path = pathlib.Path(self.cache_directory, f"{cache_key}.json")
+        if file_path.exists():
+            with open(file_path, "r") as file:
+                cache_entry = json.load(file)
+            if time.time() < cache_entry["expires"]:
+                return cache_entry["value"]
+            file_path.unlink()  # Delete expired cache file
+        return None
+
+    def delete(self, cache_key: str) -> None:
+        """
+        Delete a specific cache file by its key.
+        """
+        file_path = pathlib.Path(self.cache_directory, f"{cache_key}.json")
+        if file_path.exists():
+            file_path.unlink()
 
     def clear(self) -> None:
         """
-        Clear all cache entries.
-        This method is not implemented yet.
+        Remove all cache files in the cache directory.
         """
-        raise NotImplementedError("FileSystemCache not implemented yet.")
+        for file in self.cache_directory.glob("*.json"):
+            file.unlink()
 
 
 # Main Cache class
 class Cache:
     """
-    Main Cache class that manages different cache types (e.g., MemoryCache, FileSystemCache).
-    This class serves as the entry point for using cache in the application.
-
-    Args:
-        app (Any): The WebPy application instance.
-        config (Optional[Dict[str, Any]]): Configuration settings for the cache system.
+    Unified interface to manage caching, supporting memory and filesystem caching.
     """
 
-    # Dictionary that maps cache types to their corresponding class.
-    types = {
-        "memory": lambda config: MemoryCache(),  # In-memory cache.
-        "filesystem": lambda config: FileSystemCache(config.get("CACHE_DIR", "/tmp/cache"))
-        # Filesystem cache (not yet implemented).
+    cache_types = {
+        "memory": lambda config: MemoryCache(),
+        "filesystem": lambda config: FileSystemCache(config.get("CACHE_DIR", appdirs.user_cache_dir()))
     }
 
-    def __init__(self, app: Any, config: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, app_context: Any, config_dict: Dict[str, Any] = None) -> None:
         """
-        Initialize the Cache class with the application instance and configuration settings.
+        Initialize the Cache object.
 
         Args:
-            app (Any): The WebPy application instance.
-            config (Optional[Dict[str, Any]]): Cache configuration options.
+            app_context: Application context (optional).
+            config_dict: Configuration dictionary (e.g., CACHE_TYPE and CACHE_DIR).
         """
-        # Store the WebPy app instance.
-        self.app = app
-        # Use an empty dictionary if no configuration is provided.
-        self.config: Dict[str, Any] = config or {}
-        # Get the cache type from the configuration (default to 'memory' if not provided).
-        object = self.config.get("CACHE_TYPE", "memory")
-        # Create the appropriate cache instance based on the selected type.
-        self.cache = self.types.get(object, lambda usage: MemoryCache())(self.config)
+        self.app_context = app_context
+        self.config_dict = config_dict or {}
+        cache_type = self.config_dict.get("CACHE_TYPE", "memory")
+        self.cache = self.cache_types.get(cache_type, lambda _: MemoryCache())(self.config_dict)
 
-    def set(self, key: str, value: Any, timeout: Optional[int] = None) -> None:
+    def set(self, cache_key: str, cache_value: Any, cache_timeout: int = 300) -> None:
         """
-        Set a cache entry.
-
-        Args:
-            key (str): Cache key.
-            value (Any): Value to be cached.
-            timeout (Optional[int]): Optional expiration time in seconds.
+        Store a value in the cache with an expiration time.
         """
-        # Delegate the cache set operation to the underlying cache implementation.
-        self.cache.set(key, value, timeout)
+        self.cache.set(cache_key, cache_value, cache_timeout)
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, cache_key: str) -> Any:
         """
-        Get a cache entry by its key.
-
-        Args:
-            key (str): Cache key.
-
-        Returns:
-            Optional[Any]: Cached value or None if not found or expired.
+        Retrieve a value from the cache.
         """
-        # Delegate the cache get operation to the underlying cache implementation.
-        return self.cache.get(key)
+        return self.cache.get(cache_key)
 
-    def delete(self, key: str) -> None:
+    def delete(self, cache_key: str) -> None:
         """
-        Delete a cache entry by its key.
-
-        Args:
-            key (str): Cache key.
+        Delete a specific cache entry by its key.
         """
-        # Delegate the delete operation to the underlying cache implementation.
-        self.cache.delete(key)
+        self.cache.delete(cache_key)
 
     def clear(self) -> None:
         """
-        Clear all cache entries.
+        Clear all cached items.
         """
-        # Delegate the clear operation to the underlying cache implementation.
         self.cache.clear()
 
-    def cached(self, timeout: Optional[int] = None) -> Callable:
+    def cached(self, cache_timeout: int = 300) -> Callable:
         """
         Decorator to cache the result of a function for a specified duration.
-        This allows caching function results to avoid recomputation.
-
-        Args:
-            timeout (Optional[int]): Time in seconds before the cache expires.
-
-        Returns:
-            Callable: A decorator function that wraps the target function with caching.
         """
 
         def decorator(func: Callable) -> Callable:
-            """
-            Inner decorator function that wraps the target function to add caching.
-
-            Args:
-                func (Callable): The target function to cache.
-
-            Returns:
-                Callable: The wrapped function.
-            """
 
             @functools.wraps(func)
             def wrapper(*args, **kwargs) -> Any:
-                """
-                Wrapper function that checks if the result is cached before executing the target function.
-
-                Args:
-                    *args: Positional arguments passed to the target function.
-                    **kwargs: Keyword arguments passed to the target function.
-
-                Returns:
-                    Any: The cached result if available, otherwise the result of the target function.
-                """
-                # Generate a unique cache key based on the function name and arguments.
-                key = f"{func.__name__}:{args}:{kwargs}"
-                # Try to retrieve the result from the cache.
-                result = self.get(key)
-                if result is None:
-                    # If not cached, execute the target function and cache its result.
-                    result = func(*args, **kwargs)
-                    self.set(key, result, timeout)
-                return result  # Return the cached or freshly computed result.
+                cache_key = f"{func.__name__}:{args}:{kwargs}"
+                cached_result = self.get(cache_key)
+                if cached_result is None:
+                    cached_result = func(*args, **kwargs)
+                    self.set(cache_key, cached_result, cache_timeout)
+                return cached_result
 
             return wrapper
 
