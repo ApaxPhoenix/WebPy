@@ -237,7 +237,7 @@ class Cache:
 
         Args:
             app: Application context (optional)
-            config: Configuration dictionary with chache type and cache dir
+            config: Configuration dictionary with CACHE_TYPE and CACHE_DIR
         """
         self.app = app
         self.config = config or {}
