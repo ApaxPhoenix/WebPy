@@ -144,7 +144,7 @@ class FileSystemCache(BaseCache):
     making it persistent but slower than memory cache.
     
     Attributes:
-        cachedir: Path to directory storing cache files
+        cache_dir: Path to directory storing cache files
     """
 
     def __init__(self, directory: str = None) -> None:
@@ -154,9 +154,9 @@ class FileSystemCache(BaseCache):
         Args:
             directory: Custom cache directory path (default: system cache dir)
         """
-        self.cachedir = pathlib.Path(directory or appdirs.user_cache_dir())
+        self.cache_dir = pathlib.Path(directory or appdirs.user_cache_dir())
         # Ensure cache directory exists
-        self.cachedir.mkdir(parents=True, exist_ok=True)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def set(self, key: str, val: Any, expiry: int = 300) -> None:
         """
@@ -167,7 +167,7 @@ class FileSystemCache(BaseCache):
             val: Data to be cached
             expiry: Seconds until cache entry expires (default: 300)
         """
-        filepath = pathlib.Path(self.cachedir, f"{key}.json")
+        filepath = pathlib.Path(self.cache_dir, f"{key}.json")
         expires = time.time() + expiry
         data = {"val": val, "expires": expires}
         # Write cache entry to JSON file
@@ -184,7 +184,7 @@ class FileSystemCache(BaseCache):
         Returns:
             Any: Cached value if valid, None if expired or missing
         """
-        filepath = pathlib.Path(self.cachedir, f"{key}.json")
+        filepath = pathlib.Path(self.cache_dir, f"{key}.json")
         if filepath.exists():
             with open(filepath, "r") as file:
                 data = json.load(file)
@@ -201,15 +201,14 @@ class FileSystemCache(BaseCache):
         Args:
             key: Unique identifier for cached item
         """
-        filepath = pathlib.Path(self.cachedir, f"{key}.json")
+        filepath = pathlib.Path(self.cache_dir, f"{key}.json")
         if filepath.exists():
             filepath.unlink()
 
     def clear(self) -> None:
         """Remove all JSON files from cache directory."""
-        for file in self.cachedir.glob("*.json"):
+        for file in self.cache_dir.glob("*.json"):
             file.unlink()
-
 
 class Cache:
     """
