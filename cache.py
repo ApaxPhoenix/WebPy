@@ -1,6 +1,6 @@
 import json
 import pathlib
-import functools
+from functools import wrap
 from typing import Callable, Dict, Any
 import appdirs
 import time
@@ -307,7 +307,7 @@ class Cache:
                 Callable: Wrapped function with caching
             """
 
-            @functools.wraps(func)
+            @wraps(func)
             def wrapper(*args, **kwargs) -> Any:
                 """
                 Wrapper handling cache lookup and storage.
