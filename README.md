@@ -29,11 +29,11 @@ Setting up WebPy takes very few steps:
    from webpy import WebPy
 
    # Creating the WebPyApp wrapper
-   web_app = WebPy()
+   app = WebPy()
 
    # Define router and handler function
-   @web_app.route('/hello', methods=['GET'])
-   def hello(request, response):
+   @app.route('/', methods=['GET'])
+   def index(request, response):
        # Return a simple HTML page
        html_content = """
        <!DOCTYPE html>
@@ -53,7 +53,7 @@ Setting up WebPy takes very few steps:
        response.body = html_content.encode('utf-8')
 
    # Run the application
-   web_app.run()
+   app.run()
    ```
 
 3. **Run Your Web Application**
