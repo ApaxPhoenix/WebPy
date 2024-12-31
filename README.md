@@ -1,6 +1,6 @@
 # WebPy: Modern Python Web Framework
 
-A lightweight, modular web framework designed for building scalable Python applications.
+A minimalist Python framework for building lightweight and efficient web applications effortlessly.
 
 ## Core Features
 - HTTP request/response handling
