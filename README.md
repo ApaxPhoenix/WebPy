@@ -1,70 +1,292 @@
-# WebPy: Pythonic Web Development
+# WebPy: Modern Python Web Framework
 
-An experimental framework for fast web development in Python. Develop simple and responsive web apps with ease.
+A lightweight, modular web framework designed for building scalable Python applications.
 
-## Why Choose WebPy?
+## Core Features
+- HTTP request/response handling
+- Dynamic routing with path parameters
+- Template rendering (Jinja2)
+- Static file serving
+- WebSocket support
+- Session management
+- Middleware pipeline
+- HTTPS support
+- Custom error handling
 
-- **Minimalistic**: Build your application with no unneeded bells and whistles.
-- **Simple Structure**: Clean and straightforward setup to ensure ease of organization and maintenance.
-- **Flexible Dependencies**: Use whatever other packages you like—none are mandated for you.
-- **Scalable & Extensible**: Start with a functioning project and scale up. Extensible by adding required features whenever needed.
+## Installation & Basic Setup
 
-## Getting Started
+```bash
+pip install webpy
+```
 
-Setting up WebPy takes very few steps:
+Basic project structure:
+```
+project/
+├── static/          # Static assets
+│   ├── css/
+│   ├── js/
+│   └── images/
+├── templates/       # Jinja2 templates
+├── middleware/      # Custom middleware
+├── routes/          # Route handlers
+└── app.py          # Main application
+```
 
-1. **Installation**
+## Core Components
 
-   Install WebPy using pip:
+### 1. Application Setup
 
-   ```bash
-   pip install webpy
-   ```
+```python
+from webpy import WebPy
 
-2. **Write Your Web Application**
+app = WebPy()
 
-   Create a Python file (`app.py`) and start coding:
+if __name__ == '__main__':
+    app.run(ip='0.0.0.0', port=8080)
+```
 
-   ```python
-   from webpy import WebPy
+### 2. Request Handling
 
-   # Creating the WebPyApp wrapper
-   app = WebPy()
+```python
+@app.route('/api/data', methods=['GET', 'POST'])
+def handle_data(request, response):
+    """
+    Handles GET and POST requests to the `/api/data` endpoint.
 
-   # Define router and handler function
-   @app.route('/', methods=['GET'])
-   def index(request, response):
-       # Return a simple HTML page
-       html_content = """
-       <!DOCTYPE html>
-       <html lang="en">
-       <head>
-           <meta charset="UTF-8">
-           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-           <title>Hello Page</title>
-       </head>
-       <body>
-           <h1>Hello, World!</h1>
-       </body>
-       </html>
-       """
-       # Set content type in response header
-       response.headers['Content-Type'] = 'text/html'
-       response.body = html_content.encode('utf-8')
+    Args:
+        request: The incoming HTTP request object.
+        response: The HTTP response object to populate.
+    """
+    if request.method == 'GET':
+        # Access query parameters
+        page = request.queries.get('page', ['1'])[0]
+        
+        # Access headers
+        auth_token = request.headers.get('Authorization')
+        
+        response.json({
+            'page': page,
+            'data': 'example'
+        })
+    elif request.method == 'POST':
+        # Parse JSON body
+        data = request.json()
+        response.api(data)  # Returns 201 for POST
+```
 
-   # Run the application
-   app.run()
-   ```
+### 3. Dynamic Routing
 
-3. **Run Your Web Application**
+```python
+@app.route('/users/<id:int>')
+def get_user(request, response, id):
+    """
+    Retrieve a user by their ID.
 
-   Execute your script:
+    Args:
+        request: The incoming HTTP request object.
+        response: The HTTP response object to populate.
+        id: The user ID extracted from the URL path.
+    """
+    response.json({'user_id': id})
 
-   ```bash
-   python app.py
-   ```
+@app.route('/resources', methods=['GET', 'POST', 'PUT', 'DELETE'])
+def handle_resource(request, response):
+    """
+    Handle CRUD operations for resources.
 
-   Your application will be running on `http://127.0.0.1:8080/`, served by WebPy.
+    Args:
+        request: The incoming HTTP request object.
+        response: The HTTP response object to populate.
+    """
+    response.api({'method': request.method})
+```
+
+### 4. Template Rendering
+
+```python
+# templates/index.html
+"""
+<!DOCTYPE html>
+<html>
+    <head><title>{{ title }}</title></head>
+    <body>
+        <h1>Welcome, {{ name }}!</h1>
+    </body>
+</html>
+"""
+
+@app.route('/')
+def index(request, response):
+    """
+    Render the homepage.
+
+    Args:
+        request: The incoming HTTP request object.
+        response: The HTTP response object to populate.
+    """
+    html = app.render('index.html',
+        title='Home',
+        name='User'
+    )
+    response.headers['Content-Type'] = 'text/html'
+    response.body = html.encode('utf-8')
+```
+
+## Advanced Features
+
+### 1. Session Management
+
+```python
+from webpy import Sessions
+
+sessions = Sessions()
+
+@app.route('/login')
+def login(request, response):
+    """
+    Log in a user and start a session.
+
+    Args:
+        request: The incoming HTTP request object.
+        response: The HTTP response object to populate.
+    """
+    # Set session with 1 hour expiry
+    sessions.add('session_id', 'user123', expires=3600)
+    response.api({'message': 'Logged in'})
+
+@app.route('/session-info')
+def session_info(request, response):
+    """
+    Retrieve session information.
+
+    Args:
+        request: The incoming HTTP request object.
+        response: The HTTP response object to populate.
+    """
+    session_id = sessions.get('session_id', 'No active session')
+    response.json({'session_id': session_id})
+```
+
+### 2. Middleware Pipeline
+
+```python
+from webpy import Middleware
+
+middleware = Middleware(app)
+
+@middleware.register
+def logging_middleware(request, response):
+    """
+    Logs details of incoming requests.
+
+    Args:
+        request: The incoming HTTP request object.
+        response: The HTTP response object.
+    """
+    print(f"Request: {request.method} {request.path}")
+
+@middleware.register
+def cors_middleware(request, response):
+    """
+    Adds CORS headers to responses.
+
+    Args:
+        request: The incoming HTTP request object.
+        response: The HTTP response object.
+    """
+    response.headers['Access-Control-Allow-Origin'] = '*'
+
+@app.route('/api/protected')
+@middleware.run()
+def protected_route(request, response):
+    """
+    A protected route that applies middleware.
+
+    Args:
+        request: The incoming HTTP request object.
+        response: The HTTP response object.
+    """
+    response.api({'data': 'protected'})
+```
+
+### 3. WebSocket Integration
+
+```python
+from webpy import Socket
+
+socket = Socket(app)
+
+@socket.on('connect')
+def handle_connect(data, conn):
+    """
+    Handle WebSocket connection.
+
+    Args:
+        data: Data sent by the client.
+        conn: The WebSocket connection object.
+    """
+    print(f"Client connected: {conn}")
+
+@socket.on('message')
+def handle_message(data, conn):
+    """
+    Handle incoming WebSocket messages.
+
+    Args:
+        data: Data sent by the client.
+        conn: The WebSocket connection object.
+    """
+    socket.emit('broadcast', {
+        'message': data['message']
+    })
+
+if __name__ == '__main__':
+    app.run(port=8080)  # HTTP server
+    socket.run(port=8081)  # WebSocket server
+```
+
+### 4. Error Handling
+
+```python
+@app.error(404)
+def not_found(request, response):
+    """
+    Handle 404 Not Found errors.
+
+    Args:
+        request: The incoming HTTP request object.
+        response: The HTTP response object to populate.
+    """
+    response.json({
+        'error': 'Not Found',
+        'path': request.path
+    })
+
+@app.error(500)
+def server_error(request, response):
+    """
+    Handle 500 Internal Server Errors.
+
+    Args:
+        request: The incoming HTTP request object.
+        response: The HTTP response object to populate.
+    """
+    response.json({
+        'error': 'Internal Server Error'
+    })
+```
+
+### 5. HTTPS Configuration
+
+```python
+if __name__ == '__main__':
+    app.run(
+        ip='0.0.0.0',
+        port=443,
+        certfile='path/to/cert.pem',
+        keyfile='path/to/key.pem'
+    )
+```
 
 ## License
 
