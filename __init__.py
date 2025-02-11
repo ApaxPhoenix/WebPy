@@ -19,6 +19,6 @@ __version__ = "1.0.0"
 __author__ = "Andrew Hernandez"
 __license__ = "MIT"
 __description__ = "A lightweight web framework for handling requests and routing"
-__url__ = "https://github.com/ApaxPhoenix/WebPy"
+__url__ = "http://192.168.1.167:3000/pi/WebPy"
 __email__ = "andromedeyz@hotmail.com"
 

@@ -1,5 +1,5 @@
 from typing import Callable, List, Optional, Dict, Any, Type
-from core import WebPyCore
+from .core import WebPyCore
 
 
 class WebPy:
