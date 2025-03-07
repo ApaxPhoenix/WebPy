@@ -224,7 +224,7 @@ def basic(request, response):
     })
 ```
 
-#### OAuth (Google)
+#### OAuth
 
 ```python
 @app.route('/oauth/example')
