@@ -326,7 +326,7 @@ middleware = Middleware(app)
 
 # Create a user tracking middleware function
 @middleware.register
-def user_tracking(request: Request, response: Response) -> None:
+def tracking(request: Request, response: Response) -> None:
     """
     Track when users join the application.
     
@@ -336,7 +336,7 @@ def user_tracking(request: Request, response: Response) -> None:
     """
     # Check if this is a new session
     if not request.session.get('visited'):
-        print(f"User has joined: {request.remote_addr}")
+        print(f"User has joined: {request.remote.address}")
         request.session['visited'] = True
     
     # Log the page visit
