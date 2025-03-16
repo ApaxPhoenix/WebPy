@@ -262,7 +262,7 @@ if __name__ == '__main__':
 WebPy provides built-in session management to handle user sessions securely.
 
 ```python
-from webpy import WebPy, Request, Response, Sessions
+from webpy import WebPy, Request, Response, Sessions, Middleware
 from typing import Dict, Any, Optional, Union
 
 # Initialize the WebPy application
