@@ -426,6 +426,46 @@ def submit(request: Request, response: Response) -> None:
     })
 ```
 
+### XSS Protection
+
+WebPy includes XSS protection to prevent cross-site scripting attacks.
+
+```python
+from typing import Dict, Any
+
+# Initialize the WebPy application
+app = WebPy()
+
+# Initialize XSS protection
+xss = XSS(app)
+
+@app.route('/content', methods=['GET'])
+@xss.sanitize
+def display_content(request: Request, response: Response) -> None:
+    """
+    Display user-generated content with XSS protection.
+    
+    Args:
+        request: The Request object containing all request information
+        response: The Response object to be populated with the response data
+        
+    Returns:
+        None: The function modifies the response object directly
+        
+    Notes:
+        This route is protected by XSS sanitization through the xss.sanitize decorator.
+        All user-generated content will be sanitized before being sent to the client.
+    """
+    # Get content from the database (simulated here)
+    content = {"title": "User Post", "body": "<p>This is user content</p>"}
+    
+    # The XSS sanitizer will automatically clean any potentially malicious scripts
+    response.html(f"""
+        <h1>{content['title']}</h1>
+        <div>{content['body']}</div>
+    """)
+```
+
 ### Error Handling
 
 WebPy allows you to define custom error pages and responses.
