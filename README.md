@@ -15,6 +15,7 @@
 | **HTTPS Support**       | Secure your app with built-in HTTPS.                        |
 | **Error Handling**      | Define custom error pages and responses.                    |
 | **CSRF Protection**     | Protect your app from CSRF attacks.                         |
+| **XSS Protection**      | Prevent cross-site scripting vulnerabilities.               |
 | **Blueprint System**    | Organize your app into modular components.                  |
 | **Middleware System**   | Process requests/responses through customizable pipelines.  |
 
