@@ -315,7 +315,7 @@ WebPy includes a Middleware system for processing requests and responses. Below 
 #### Using Middleware for User Tracking
 
 ```python
-from webpy import WebPy, Request, Response
+from webpy import WebPy, Middleware, Request, Response
 from typing import Dict, Any
 
 # Initialize the WebPy application
@@ -358,9 +358,8 @@ def leaves(request: Request, response: Response) -> None:
         # Clear session data
         request.session.clear()
 
-# Apply middleware to a homepage route
+# Apply middleware to all routes by default
 @app.route('/')
-@middleware.run()
 def homepage(request: Request, response: Response) -> None:
     """
     Homepage with user tracking middleware.
@@ -371,7 +370,6 @@ def homepage(request: Request, response: Response) -> None:
 
 # Apply only user tracking to the about page
 @app.route('/about')
-@middleware.run([joins])
 def about(request: Request, response: Response) -> None:
     """
     About page with only user tracking middleware.
@@ -379,6 +377,17 @@ def about(request: Request, response: Response) -> None:
     response.json({
         'about': 'WebPy Framework',
         'version': '1.0.0'
+    })
+
+# Example of excluding middleware from a specific route
+@app.route('/api/health')
+@middleware.exclude
+def health_check(request: Request, response: Response) -> None:
+    """
+    Health check endpoint without any middleware.
+    """
+    response.json({
+        'status': 'healthy'
     })
 ```
 
