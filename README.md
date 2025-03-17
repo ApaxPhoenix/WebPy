@@ -325,7 +325,7 @@ app = WebPy()
 middleware = Middleware(app)
 
 # Create a user tracking middleware function
-@middleware.register
+@middleware.enroll
 def joins(request: Request, response: Response) -> None:
     """
     Track when users join the application.
@@ -343,7 +343,7 @@ def joins(request: Request, response: Response) -> None:
     print(f"User accessed: {request.path}")
 
 # Create a middleware to detect when users leave
-@middleware.register
+@middleware.enroll
 def leaves(request: Request, response: Response) -> None:
     """
     Track when users might be leaving the application.
