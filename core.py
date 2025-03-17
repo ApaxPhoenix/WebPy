@@ -12,7 +12,7 @@ import warnings
 HandlerFunction = Callable[[Request, Response, Any], None]
 ErrorHandlerFunction = Callable[[Optional[Request], Response], None]
 RouteMatchResult = Tuple[HandlerFunction, Dict[str, Any]]
-T = TypeVar('T', bound=Callable)
+T = TypeVar("T", bound=Callable)
 
 
 class WebPyCore(BaseHTTPRequestHandler):
@@ -33,13 +33,26 @@ class WebPyCore(BaseHTTPRequestHandler):
     # MIME types for commonly served files, mapped by file extensions
     # Used to set appropriate Content-Type headers when serving static files
     mimes: Dict[str, str] = {
-        ".html": "text/html", ".css": "text/css", ".js": "application/javascript",
-        ".txt": "text/plain", ".json": "application/json", ".xml": "application/xml",
-        ".pdf": "application/pdf", ".zip": "application/zip", ".png": "image/png",
-        ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif",
-        ".svg": "image/svg+xml", ".mp3": "audio/mpeg", ".ogg": "audio/ogg",
-        ".mp4": "video/mp4", ".webm": "video/webm", ".woff": "font/woff",
-        ".woff2": "font/woff2", ".ttf": "font/ttf",
+        ".html": "text/html",
+        ".css": "text/css",
+        ".js": "application/javascript",
+        ".txt": "text/plain",
+        ".json": "application/json",
+        ".xml": "application/xml",
+        ".pdf": "application/pdf",
+        ".zip": "application/zip",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".gif": "image/gif",
+        ".svg": "image/svg+xml",
+        ".mp3": "audio/mpeg",
+        ".ogg": "audio/ogg",
+        ".mp4": "video/mp4",
+        ".webm": "video/webm",
+        ".woff": "font/woff",
+        ".woff2": "font/woff2",
+        ".ttf": "font/ttf",
     }
 
     # Stores custom error handlers for specific HTTP status codes
@@ -164,11 +177,14 @@ class WebPyCore(BaseHTTPRequestHandler):
         """
         try:
             # Remove the "/static/" prefix to get the relative path
-            filepath = Path(self.static, path[len("/static/"):])
+            filepath = Path(self.static, path[len("/static/") :])
             with open(filepath, "rb") as file:
                 # Send response with file content and correct MIME type
                 self.send_response(200)
-                self.send_header("Content-type", self.mimes.get(filepath.suffix.lower(), "application/octet-stream"))
+                self.send_header(
+                    "Content-type",
+                    self.mimes.get(filepath.suffix.lower(), "application/octet-stream"),
+                )
                 self.end_headers()
                 self.wfile.write(file.read())
         except FileNotFoundError:
@@ -224,10 +240,15 @@ class WebPyCore(BaseHTTPRequestHandler):
         blueprint.register(self)
 
     @classmethod
-    def run(cls, ip: str = '127.0.0.1', port: int = 8080,
-            server: Type[ThreadingHTTPServer] = ThreadingHTTPServer,
-            handler: Optional[Type[BaseHTTPRequestHandler], Any] = None,
-            certfile: Optional[str] = None, keyfile: Optional[str] = None) -> None:
+    def run(
+        cls,
+        ip: str = "127.0.0.1",
+        port: int = 8080,
+        server: Type[ThreadingHTTPServer] = ThreadingHTTPServer,
+        handler: Optional[Type[BaseHTTPRequestHandler], Any] = None,
+        certfile: Optional[str] = None,
+        keyfile: Optional[str] = None,
+    ) -> None:
         """
         Start the web server, with optional HTTPS if both certfile and keyfile are provided.
 
@@ -252,7 +273,9 @@ class WebPyCore(BaseHTTPRequestHandler):
 
         # Warn and exit if only one of certfile or keyfile is provided
         if (certfile and not keyfile) or (keyfile and not certfile):
-            warnings.warn("Both certfile and keyfile are required for HTTPS to work.", UserWarning)
+            warnings.warn(
+                "Both certfile and keyfile are required for HTTPS to work.", UserWarning
+            )
             return
 
         # Setup SSL context if both certfile and keyfile are provided

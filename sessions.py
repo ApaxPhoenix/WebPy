@@ -19,8 +19,14 @@ class Sessions:
         """
         self.cookies = SimpleCookie()  # SimpleCookie instance for cookie management
 
-    def add(self, cookie: str, value: str, path: str = "/",
-            secure: bool = False, expires: Optional[int] = None) -> None:
+    def add(
+        self,
+        cookie: str,
+        value: str,
+        path: str = "/",
+        secure: bool = False,
+        expires: Optional[int] = None,
+    ) -> None:
         """
         Add a new cookie to the SimpleCookie storage.
 

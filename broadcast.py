@@ -46,7 +46,9 @@ class Request:
         Returns:
             str: The HTTP request method (e.g., "GET", "POST", "PUT", "DELETE").
         """
-        return cast(str, self.handler.command)  # Handler's command stores the HTTP method
+        return cast(
+            str, self.handler.command
+        )  # Handler's command stores the HTTP method
 
     @property
     def path(self) -> str:
@@ -78,7 +80,9 @@ class Request:
         Returns:
             Dict[str, str]: A dictionary mapping header names to their values.
         """
-        return dict(self.handler.headers)  # Convert headers to a dictionary for easy access
+        return dict(
+            self.handler.headers
+        )  # Convert headers to a dictionary for easy access
 
     @property
     def queries(self) -> Dict[str, Union[str, List[str]]]:
@@ -220,14 +224,28 @@ class Response:
         context = {
             "GET": lambda: (data if data is not None else {}, 200),
             "POST": lambda: (
-                {"message": "Resource created", "data": data} if data else {"message": "Resource created"}, 201),
+                (
+                    {"message": "Resource created", "data": data}
+                    if data
+                    else {"message": "Resource created"}
+                ),
+                201,
+            ),
             "PUT": lambda: (
-                {"message": "Resource updated", "data": data} if data else {"message": "Resource updated"}, 200),
+                (
+                    {"message": "Resource updated", "data": data}
+                    if data
+                    else {"message": "Resource updated"}
+                ),
+                200,
+            ),
             "DELETE": lambda: ({"message": "Resource deleted"}, 204),
         }
 
         # Get the appropriate response handler based on method, or use default for unsupported methods
-        response_handler = context.get(method, lambda: ({"error": "Method not allowed"}, 405))
+        response_handler = context.get(
+            method, lambda: ({"error": "Method not allowed"}, 405)
+        )
 
         # Call the handler to get response data and status
         response_data, status = response_handler()

@@ -4,7 +4,7 @@ from functools import wraps
 from webpy import WebPy
 
 # Type variables for better function typing
-T = TypeVar('T', bound=Callable[..., Any])
+T = TypeVar("T", bound=Callable[..., Any])
 MiddlewareHandler = Callable[[Request, Response], Any]
 
 
@@ -53,7 +53,9 @@ class Middleware:
         self.handlers.append(handler)
         return handler
 
-    def run(self, handlers: Optional[List[MiddlewareHandler]] = None) -> Callable[[T], T]:
+    def run(
+        self, handlers: Optional[List[MiddlewareHandler]] = None
+    ) -> Callable[[T], T]:
         """
         Decorator to execute specified middleware handlers before the route function.
 
@@ -95,7 +97,9 @@ class Middleware:
             """
 
             @wraps(handler)
-            def wrapper(request: Request, response: Response, *args: Any, **kwargs: Any) -> Any:
+            def wrapper(
+                request: Request, response: Response, *args: Any, **kwargs: Any
+            ) -> Any:
                 # Run either specified handlers or all registered handlers
                 pipeline = handlers if handlers is not None else self.handlers
                 for middleware_handler in pipeline:

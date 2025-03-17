@@ -4,7 +4,7 @@ import json
 from typing import Callable, Dict, Any, Optional, List, Tuple, TypeVar, cast
 
 # Type variables for better function typing
-T = TypeVar('T', bound=Callable[..., Any])
+T = TypeVar("T", bound=Callable[..., Any])
 EventHandler = Callable[[Any, socket.socket], None]
 
 
@@ -191,10 +191,11 @@ class WebSocket:
 
                 # Start a new thread to handle this client connection
                 thread = threading.Thread(
-                    target=self.connection,
-                    args=(connection, address)
+                    target=self.connection, args=(connection, address)
                 )
-                thread.daemon = True  # Set as daemon so thread exits when main program does
+                thread.daemon = (
+                    True  # Set as daemon so thread exits when main program does
+                )
                 thread.start()
 
         except KeyboardInterrupt:

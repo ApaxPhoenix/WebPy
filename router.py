@@ -1,8 +1,19 @@
 import re
-from typing import Callable, Dict, List, Optional, Union, Tuple, Pattern, TypeVar, Any, cast
+from typing import (
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Union,
+    Tuple,
+    Pattern,
+    TypeVar,
+    Any,
+    cast,
+)
 
 # Define type variables and type aliases for better type hinting
-T = TypeVar('T', bound=Callable[..., Any])
+T = TypeVar("T", bound=Callable[..., Any])
 RouteHandler = Callable[..., Any]
 RouteEntry = Dict[str, Union[RouteHandler, List[str], Pattern[str]]]
 RouteMatch = Tuple[RouteHandler, Dict[str, str]]
@@ -20,6 +31,7 @@ class Router:
         routes (Dict[str, RouteEntry]): A dictionary mapping path patterns to their handlers,
             allowed HTTP methods, and compiled regex patterns.
     """
+
     routes: Dict[str, RouteEntry] = {}
 
     @classmethod
@@ -71,7 +83,7 @@ class Router:
             cls.routes[path] = {
                 "handler": handler,
                 "methods": methods,
-                "pattern": regex
+                "pattern": regex,
             }
             return handler  # Return the original handler function unchanged
 

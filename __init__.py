@@ -6,14 +6,7 @@ from .sessions import Sessions
 from .webpy import WebPy
 
 
-__all__ = [
-    'Router',
-    'Request',
-    'Response',
-    'Middleware',
-    'Sessions',
-    'WebPy'
-]
+__all__ = ["Router", "Request", "Response", "Middleware", "Sessions", "WebPy"]
 
 __version__ = "1.0.0"
 __author__ = "Andrew Hernandez"
@@ -21,4 +14,3 @@ __license__ = "MIT"
 __description__ = "A lightweight web framework for handling requests and routing"
 __url__ = "http://192.168.1.167:3000/pi/WebPy"
 __email__ = "andromedeyz@hotmail.com"
-

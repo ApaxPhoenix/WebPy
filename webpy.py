@@ -2,7 +2,7 @@ from typing import Callable, List, Optional, Any, Type, TypeVar
 from .core import WebPyCore
 
 # Type variables for better function typing
-T = TypeVar('T', bound=Callable[..., Any])
+T = TypeVar("T", bound=Callable[..., Any])
 RouteHandler = Callable[..., Any]
 ErrorHandler = Callable[..., Any]
 
@@ -118,8 +118,13 @@ class WebPy:
         """
         return self.app.render(filename, **kwargs)
 
-    def run(self, ip: str = "127.0.0.1", port: int = 8080,
-            certfile: Optional[str] = None, keyfile: Optional[str] = None) -> None:
+    def run(
+        self,
+        ip: str = "127.0.0.1",
+        port: int = 8080,
+        certfile: Optional[str] = None,
+        keyfile: Optional[str] = None,
+    ) -> None:
         """
         Start the web application server.
 
