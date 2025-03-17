@@ -316,7 +316,6 @@ WebPy includes a Middleware system for processing requests and responses. Below 
 
 ```python
 from webpy import WebPy, Middleware, Request, Response
-from typing import Dict, Any
 
 # Initialize the WebPy application
 app = WebPy()
@@ -329,17 +328,13 @@ middleware = Middleware(app)
 def joins(request: Request, response: Response) -> None:
     """
     Track when users join the application.
-    
+
     Args:
         request: The Request object
         response: The Response object
     """
-    # Check if this is a new session
-    if not request.session.get('visited'):
-        print(f"User has joined: {request.remote.address}")
-        request.session['visited'] = True
-    
-    # Log the page visit
+    address = request.headers.get("X-Forwarded-For", request.client)
+    print(f"User has joined: {address}")
     print(f"User accessed: {request.path}")
 
 # Create a middleware to detect when users leave
@@ -347,16 +342,15 @@ def joins(request: Request, response: Response) -> None:
 def leaves(request: Request, response: Response) -> None:
     """
     Track when users might be leaving the application.
-    
+
     Args:
         request: The Request object
         response: The Response object
     """
-    # Check if this is a typical exit pattern (like navigating to logout)
-    if request.path == '/logout' or request.path == '/exit':
-        print(f"User has left: {request.remote.address}")
-        # Clear session data
-        request.session.clear()
+    address = request.headers.get("X-Forwarded-For", request.client)
+
+    if request.path in ('/logout', '/exit'):
+        print(f"User has left: {address}")
 
 # Apply middleware to all routes by default
 @app.route('/')
