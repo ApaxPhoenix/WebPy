@@ -1,47 +1,71 @@
 import re
-from typing import Callable, Dict, List, Optional, Union, Tuple, Pattern
+from typing import Callable, Dict, List, Optional, Union, Tuple, Pattern, TypeVar, Any, cast
+
+# Define type variables and type aliases for better type hinting
+T = TypeVar('T', bound=Callable[..., Any])
+RouteHandler = Callable[..., Any]
+RouteEntry = Dict[str, Union[RouteHandler, List[str], Pattern[str]]]
+RouteMatch = Tuple[RouteHandler, Dict[str, str]]
 
 
 class Router:
     """
-    A simple router class that registers routes and matches them based on
-    the path and HTTP method using regular expressions.
+    A flexible URL router that handles path registration and matching with support for
+    dynamic path parameters using regular expressions.
+
+    This router maps URL paths to handler functions and supports pattern matching for
+    dynamic path segments (e.g., "/users/<id:int>", "/posts/<slug:str>").
 
     Attributes:
-        routes (Dict[str, Dict[str, Union[Callable, List[str], Pattern]]]):
-            A dictionary to store routes, their handlers, allowed methods, and compiled regex patterns.
+        routes (Dict[str, RouteEntry]): A dictionary mapping path patterns to their handlers,
+            allowed HTTP methods, and compiled regex patterns.
     """
-    routes: Dict[str, Dict[str, Union[Callable, List[str], Pattern]]] = {}
+    routes: Dict[str, RouteEntry] = {}
 
     @classmethod
-    def route(cls, path: str, methods: Optional[List[str]] = None) -> Callable[[Callable], Callable]:
+    def route(cls, path: str, methods: Optional[List[str]] = None) -> Callable[[T], T]:
         """
-        Decorator to register a route with an optional list of HTTP methods.
+        Decorator to register a route handler with an optional list of HTTP methods.
+
+        This method converts dynamic path segments into regex capture groups and
+        associates the path with a handler function.
+
+        Dynamic segments can be specified using the format: <name:type>
+        For example: "/users/<id:int>" or "/posts/<slug:str>"
 
         Args:
-            path (str): The route path, potentially including dynamic segments (e.g., "/user/<id:int>").
-            methods (Optional[List[str]]): The list of allowed HTTP methods for the route. Defaults to ["GET"].
+            path (str): The route path pattern, which may include dynamic segments.
+            methods (Optional[List[str]]): The list of allowed HTTP methods for this route.
+                                          Defaults to ["GET"] if not specified.
 
         Returns:
-            Callable[[Callable], Callable]: A decorator function that registers the handler for the route.
+            Callable[[T], T]: A decorator function that registers the handler for the route.
+
+        Example:
+            @Router.route("/users/<id:int>", methods=["GET", "PUT"])
+            def handle_user(request, response, id):
+                # id will be extracted from the URL path
+                pass
         """
         if methods is None:
             methods = ["GET"]  # Default to GET if no methods are provided
 
-        # Convert dynamic path segments like <id:int> to regex patterns for parameter extraction
+        # Convert dynamic path segments like <id:int> to regex patterns with named capture groups
+        # This allows for automatic parameter extraction when matching routes
         pattern = re.sub(r"<(\w+):(\w+)>", r"(?P<\1>[^/]+)", path)
-        regex: Pattern = re.compile(f"^{pattern}$")  # Compile the pattern into a regex
 
-        def decorator(handler: Callable) -> Callable:
+        # Compile the pattern into a regex, ensuring it matches the entire path
+        regex: Pattern[str] = re.compile(f"^{pattern}$")
+
+        def decorator(handler: T) -> T:
             """
-            Registers the route by associating the path with the handler,
-            allowed methods, and compiled regex pattern.
+            Inner decorator function that registers the route in the router's routes dictionary.
 
             Args:
-                handler (Callable): The function that handles requests to the route.
+                handler (T): The function that handles requests to this route.
 
             Returns:
-                Callable: The original handler function.
+                T: The original handler function, unchanged.
             """
             # Store the route details: handler, allowed methods, and compiled regex pattern
             cls.routes[path] = {
@@ -49,53 +73,75 @@ class Router:
                 "methods": methods,
                 "pattern": regex
             }
-            return handler  # Return the original handler function
+            return handler  # Return the original handler function unchanged
 
         return decorator
 
     @classmethod
-    def match_route(cls, path: str, method: str) -> Optional[Tuple[Callable, Dict[str, str]]]:
+    def match(cls, path: str, method: str) -> Optional[RouteMatch]:
         """
-        Match the incoming request path and method to a registered route.
+        Match an incoming request path and method against registered routes.
+
+        This method iterates through all registered routes to find one that matches
+        both the URL path pattern and the HTTP method.
 
         Args:
-            path (str): The request path.
+            path (str): The request URL path to match.
             method (str): The HTTP method of the request (e.g., "GET", "POST").
 
         Returns:
             Optional[Tuple[Callable, Dict[str, str]]]:
-                If a match is found, returns a tuple of the route handler and a dictionary of extracted parameters.
+                If a match is found, returns a tuple containing:
+                - The route handler function
+                - A dictionary of extracted parameters from the path
                 If no match is found, returns None.
         """
         # Iterate over all registered routes to find a matching path and method
         for route in cls.routes.values():
-            pattern: Pattern = route.get("pattern")
-            allowed_methods = route.get("methods", ["GET"])  # Default to GET if no methods are specified
+            # Get the compiled regex pattern for this route
+            pattern = cast(Pattern[str], route.get("pattern"))
 
-            # Check if the route pattern matches the path and method is allowed
-            if pattern and pattern.match(path) and method in allowed_methods:
-                handler = route["handler"]
-                match = pattern.match(path)
-                params = match.groupdict() if match else {}  # Extract parameters from the path if present
-                return handler, params  # Return the matched handler and extracted parameters
+            # Get allowed methods, defaulting to ["GET"] if none specified
+            allowed_methods = cast(List[str], route.get("methods", ["GET"]))
 
-        return None  # Return None if no match is found
+            # Check if both the pattern matches the path AND the method is allowed
+            match = pattern.match(path) if pattern else None
+            if match and method in allowed_methods:
+                # Extract the handler function
+                handler = cast(RouteHandler, route["handler"])
+
+                # Extract named parameters from the regex match
+                params = match.groupdict()
+
+                # Return the handler and extracted parameters
+                return handler, params
+
+        # No matching route found
+        return None
 
     @classmethod
-    def get_allowed_methods(cls, path: str) -> List[str]:
+    def methods(cls, path: str) -> List[str]:
         """
-        Get a list of allowed HTTP methods for a given path.
+        Get a list of HTTP methods allowed for a specific path.
+
+        This is useful for implementing OPTIONS requests or for
+        responding with appropriate Allow headers for 405 Method Not Allowed responses.
 
         Args:
-            path (str): The route path.
+            path (str): The URL path to check for allowed methods.
 
         Returns:
-            List[str]: A list of allowed methods for the route, or ["GET"] if no specific methods are registered.
+            List[str]: A list of allowed HTTP method strings for the path.
+                      Returns ["GET"] as default if the path is not registered.
         """
-        # Iterate over the registered routes to check if the path matches any pattern
+        # Iterate through registered routes to find a matching pattern
         for route in cls.routes.values():
-            pattern: Pattern = route.get("pattern")
-            if pattern and pattern.match(path):
-                return route.get("methods", ["GET"])  # Return the allowed methods for the route
+            pattern = cast(Pattern[str], route.get("pattern"))
 
-        return ["GET"]  # Default to "GET" if no match is found
+            # If this route's pattern matches the given path
+            if pattern and pattern.match(path):
+                # Return the allowed methods for this route
+                return cast(List[str], route.get("methods", ["GET"]))
+
+        # No matching route found, default to allowing only GET
+        return ["GET"]

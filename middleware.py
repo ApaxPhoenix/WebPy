@@ -1,53 +1,107 @@
-from typing import Callable, List, Any
+from typing import Callable, List, Any, TypeVar, cast, Optional
 from broadcast import Request, Response
 from functools import wraps
 from webpy import WebPy
 
+# Type variables for better function typing
+T = TypeVar('T', bound=Callable[..., Any])
+MiddlewareHandler = Callable[[Request, Response], Any]
+
 
 class Middleware:
-    """Middleware class to manage request/response processing handlers."""
+    """
+    Middleware class to manage request/response processing handlers.
+
+    This class provides functionality to register and execute middleware functions
+    that can process requests and responses before they reach the route handlers.
+    Middleware can be applied globally or selectively to specific routes.
+    """
 
     def __init__(self, app: WebPy) -> None:
         """
         Initialize the Middleware with the given application.
 
+        Sets up the middleware container and associates it with a WebPy application
+        instance for integration with the routing system.
+
         Args:
-            app (WebPy): The application instance.
+            app (WebPy): The WebPy application instance to attach middleware to.
         """
         self.app = app
-        self.objects: List[Callable[[Request, Response], Any]] = []
+        self.handlers: List[MiddlewareHandler] = []
 
-    def register(self, object: Callable[[Request, Response], Any]) -> Callable:
+    def register(self, handler: MiddlewareHandler) -> MiddlewareHandler:
         """
-        Register an object function to be executed on requests.
+        Register a middleware handler to be executed on requests.
+
+        This method adds the middleware handler to the execution pipeline
+        that processes each request before it reaches the route handler.
 
         Args:
-            object (Callable[[Request, Response], Any]): The object function.
+            handler (MiddlewareHandler): The middleware function that accepts
+                                        request and response objects.
 
         Returns:
-            Callable: The registered object function.
-        """
-        self.objects.append(object)
-        return object
+            MiddlewareHandler: The registered middleware handler, unchanged.
 
-    def run(self, objects: List[Callable] = None) -> Callable:
+        Example:
+            @middleware.register
+            def auth_middleware(request, response):
+                # Process authentication
+                pass
         """
-        Decorator to execute specified objects before the route function.
-        If no objects are specified, runs all registered objects.
+        self.handlers.append(handler)
+        return handler
+
+    def run(self, handlers: Optional[List[MiddlewareHandler]] = None) -> Callable[[T], T]:
+        """
+        Decorator to execute specified middleware handlers before the route function.
+
+        If no handlers are specified, runs all registered middleware handlers in
+        the order they were registered.
 
         Args:
-            objects (List[Callable], optional): List of specific objects to run.
+            handlers (Optional[List[MiddlewareHandler]]): List of specific middleware
+                                                         handlers to run. If None,
+                                                         all registered handlers
+                                                         will be executed.
 
         Returns:
-            Callable: The decorated function.
+            Callable[[T], T]: A decorator that applies middleware to the route handler.
+
+        Example:
+            @app.route("/protected")
+            @middleware.run([auth_middleware, logging_middleware])
+            def protected_route(request, response):
+                # This route will use only auth and logging middleware
+                pass
+
+            @app.route("/public")
+            @middleware.run()  # Use all registered middleware
+            def public_route(request, response):
+                # This route will use all middleware
+                pass
         """
-        def decorator(handler: Callable) -> Callable:
+
+        def decorator(handler: T) -> T:
+            """
+            Inner decorator function that wraps the route handler with middleware.
+
+            Args:
+                handler (T): The route handler function.
+
+            Returns:
+                T: The wrapped handler function.
+            """
+
             @wraps(handler)
-            def wrapper(request: Request, response: Response, *args, **kwargs):
-                # Run either specified objects or all registered objects
-                pipeline = objects if objects is not None else self.objects
-                for object in pipeline:
-                    object(request, response)
+            def wrapper(request: Request, response: Response, *args: Any, **kwargs: Any) -> Any:
+                # Run either specified handlers or all registered handlers
+                pipeline = handlers if handlers is not None else self.handlers
+                for middleware_handler in pipeline:
+                    middleware_handler(request, response)
                 return handler(request, response, *args, **kwargs)
-            return wrapper
+
+            return cast(T, wrapper)
+
         return decorator
