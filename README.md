@@ -441,7 +441,7 @@ xss = XSS(app)
 
 @app.route('/content', methods=['GET'])
 @xss.sanitize
-def display_content(request: Request, response: Response) -> None:
+def content(request: Request, response: Response) -> None:
     """
     Display user-generated content with XSS protection.
     
