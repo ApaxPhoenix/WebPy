@@ -30,9 +30,9 @@ class Middleware:
         self.app = app
         self.handlers: List[MiddlewareHandler] = []
 
-    def register(self, handler: MiddlewareHandler) -> MiddlewareHandler:
+    def enroll(self, handler: MiddlewareHandler) -> MiddlewareHandler:
         """
-        Register a middleware handler to be executed on requests.
+        Enroll a middleware handler to be executed on requests.
 
         This method adds the middleware handler to the execution pipeline
         that processes each request before it reaches the route handler.
@@ -45,7 +45,7 @@ class Middleware:
             MiddlewareHandler: The registered middleware handler, unchanged.
 
         Example:
-            @middleware.register
+            @middleware.enroll
             def auth_middleware(request, response):
                 # Process authentication
                 pass
@@ -53,59 +53,25 @@ class Middleware:
         self.handlers.append(handler)
         return handler
 
-    def run(
-        self, handlers: Optional[List[MiddlewareHandler]] = None
-    ) -> Callable[[T], T]:
+    def exclude(self, handler: T) -> T:
         """
-        Decorator to execute specified middleware handlers before the route function.
+        Decorator to exclude middleware from being executed for the decorated route.
 
-        If no handlers are specified, runs all registered middleware handlers in
-        the order they were registered.
+        This can be used to skip middleware processing for specific routes
+        that don't require it.
 
         Args:
-            handlers (Optional[List[MiddlewareHandler]]): List of specific middleware
-                                                         handlers to run. If None,
-                                                         all registered handlers
-                                                         will be executed.
+            handler (T): The route handler function.
 
         Returns:
-            Callable[[T], T]: A decorator that applies middleware to the route handler.
+            T: The original handler function, unchanged.
 
         Example:
-            @app.route("/protected")
-            @middleware.run([auth_middleware, logging_middleware])
-            def protected_route(request, response):
-                # This route will use only auth and logging middleware
-                pass
-
             @app.route("/public")
-            @middleware.run()  # Use all registered middleware
+            @middleware.exclude
             def public_route(request, response):
-                # This route will use all middleware
+                # This route will not use any middleware
                 pass
         """
-
-        def decorator(handler: T) -> T:
-            """
-            Inner decorator function that wraps the route handler with middleware.
-
-            Args:
-                handler (T): The route handler function.
-
-            Returns:
-                T: The wrapped handler function.
-            """
-
-            @wraps(handler)
-            def wrapper(
-                request: Request, response: Response, *args: Any, **kwargs: Any
-            ) -> Any:
-                # Run either specified handlers or all registered handlers
-                pipeline = handlers if handlers is not None else self.handlers
-                for middleware_handler in pipeline:
-                    middleware_handler(request, response)
-                return handler(request, response, *args, **kwargs)
-
-            return cast(T, wrapper)
-
-        return decorator
+        # Simply return the original handler without applying middleware
+        return handler
