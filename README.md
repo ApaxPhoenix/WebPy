@@ -326,7 +326,7 @@ middleware = Middleware(app)
 
 # Create a user tracking middleware function
 @middleware.register
-def tracking(request: Request, response: Response) -> None:
+def joins(request: Request, response: Response) -> None:
     """
     Track when users join the application.
     
@@ -344,7 +344,7 @@ def tracking(request: Request, response: Response) -> None:
 
 # Create a middleware to detect when users leave
 @middleware.register
-def exit_detection(request: Request, response: Response) -> None:
+def leaves(request: Request, response: Response) -> None:
     """
     Track when users might be leaving the application.
     
@@ -354,7 +354,7 @@ def exit_detection(request: Request, response: Response) -> None:
     """
     # Check if this is a typical exit pattern (like navigating to logout)
     if request.path == '/logout' or request.path == '/exit':
-        print(f"User has left: {request.remote_addr}")
+        print(f"User has left: {request.remote.address}")
         # Clear session data
         request.session.clear()
 
@@ -371,7 +371,7 @@ def homepage(request: Request, response: Response) -> None:
 
 # Apply only user tracking to the about page
 @app.route('/about')
-@middleware.run([user_tracking])
+@middleware.run([joins])
 def about(request: Request, response: Response) -> None:
     """
     About page with only user tracking middleware.
