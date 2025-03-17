@@ -333,7 +333,7 @@ def joins(request: Request, response: Response) -> None:
         request: The Request object
         response: The Response object
     """
-    address = request.headers.get("X-Forwarded-For", request.client)
+    address = request.headers.get("X-Forwarded-For")
     print(f"User has joined: {address}")
     print(f"User accessed: {request.path}")
 
@@ -347,7 +347,7 @@ def leaves(request: Request, response: Response) -> None:
         request: The Request object
         response: The Response object
     """
-    address = request.headers.get("X-Forwarded-For", request.client)
+    address = request.headers.get("X-Forwarded-For")
 
     if request.path in ('/logout', '/exit'):
         print(f"User has left: {address}")
