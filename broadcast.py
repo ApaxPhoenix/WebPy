@@ -1,4 +1,5 @@
 import json
+import cgi
 from typing import Any, Dict, Optional, Union, List, cast
 from urllib.parse import parse_qs, urlparse, ParseResult
 from http.server import BaseHTTPRequestHandler
@@ -7,6 +8,7 @@ from http.server import BaseHTTPRequestHandler
 QueryDict = Dict[str, List[str]]  # The actual return type of parse_qs
 HeadersDict = Dict[str, str]
 JsonData = Dict[str, Any]
+FormData = Dict[str, Any]  # Type alias for form data
 
 
 class Request:
@@ -110,19 +112,66 @@ class Request:
                                      or None if no data is present or parsing fails.
         """
         # Get content length from headers, defaulting to 0 if not present
-        content = int(self.headers.get("Content-Length", "0"))
+        length = int(self.headers.get("Content-Length", "0"))
 
         # Only attempt to read and parse JSON if content length is positive
-        if content > 0:
+        if length > 0:
             try:
                 # Read binary data from the request body based on content length
-                data = self.handler.rfile.read(content)
+                data = self.handler.rfile.read(length)
                 # Decode binary data to UTF-8 string and parse as JSON
                 return json.loads(data.decode("utf-8"))
             except (json.JSONDecodeError, UnicodeDecodeError):
                 # Return None if JSON parsing fails
                 return None
         return None  # Return None if no data to parse
+
+    def form(self) -> FormData:
+        """
+        Parse the request body as form data.
+
+        This method processes form data from the request body based on Content-Type.
+        It handles both application/x-www-form-urlencoded and multipart/form-data formats.
+
+        Returns:
+            Dict[str, Any]: A dictionary of form fields and their values.
+                         Returns an empty dict if no form data is present.
+        """
+
+        # If there's no Content-Type or Content-Length, return empty dict
+        if not self.headers.get("Content-Type", "") or int(self.headers.get("Content-Length", "0")) <= 0:
+            return {}
+
+        try:
+            # Use cgi.FieldStorage to parse form data
+            data = cgi.FieldStorage(
+                fp=self.handler.rfile,
+                headers=self.handler.headers,
+                environ={
+                    'REQUEST_METHOD': self.method,
+                    'CONTENT_TYPE': self.headers.get("Content-Type", ""),
+                }
+            )
+
+            # Convert form data to dictionary, handling both simple fields and file uploads
+            result = {}
+            for key in data.keys():
+                field = data[key]
+                # Handle file uploads separately if needed
+                if field.filename:
+                    result[key] = {
+                        'filename': field.filename,
+                        'type': field.type,
+                        'value': field.value
+                    }
+                else:
+                    result[key] = field.value
+
+            return result
+
+        except Exception:
+            # Return empty dict if parsing fails
+            return {}
 
 
 class Response:
@@ -220,7 +269,6 @@ class Response:
         method = cast(str, self.handler.command)  # Get the HTTP method
 
         # Define response content and status code based on HTTP method
-        # Each lambda returns a tuple of (response_data, status_code)
         context = {
             "GET": lambda: (data if data is not None else {}, 200),
             "POST": lambda: (
@@ -243,12 +291,12 @@ class Response:
         }
 
         # Get the appropriate response handler based on method, or use default for unsupported methods
-        response_handler = context.get(
+        handler = context.get(
             method, lambda: ({"error": "Method not allowed"}, 405)
         )
 
         # Call the handler to get response data and status
-        response_data, status = response_handler()
+        data, status = handler()
 
         # Set the determined status code
         self.status = status
@@ -257,7 +305,7 @@ class Response:
         self.headers["Content-Type"] = "application/json"
 
         # Encode response data to JSON format in bytes
-        self.body = json.dumps(response_data).encode("utf-8")
+        self.body = json.dumps(data).encode("utf-8")
 
         # Return self for method chaining
         return self
