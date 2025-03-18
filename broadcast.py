@@ -139,7 +139,10 @@ class Request:
         """
 
         # If there's no Content-Type or Content-Length, return empty dict
-        if not self.headers.get("Content-Type", "") or int(self.headers.get("Content-Length", "0")) <= 0:
+        if (
+            not self.headers.get("Content-Type", "")
+            or int(self.headers.get("Content-Length", "0")) <= 0
+        ):
             return {}
 
         try:
@@ -148,9 +151,9 @@ class Request:
                 fp=self.handler.rfile,
                 headers=self.handler.headers,
                 environ={
-                    'REQUEST_METHOD': self.method,
-                    'CONTENT_TYPE': self.headers.get("Content-Type", ""),
-                }
+                    "REQUEST_METHOD": self.method,
+                    "CONTENT_TYPE": self.headers.get("Content-Type", ""),
+                },
             )
 
             # Convert form data to dictionary, handling both simple fields and file uploads
@@ -160,9 +163,9 @@ class Request:
                 # Handle file uploads separately if needed
                 if field.filename:
                     result[key] = {
-                        'filename': field.filename,
-                        'type': field.type,
-                        'value': field.value
+                        "filename": field.filename,
+                        "type": field.type,
+                        "value": field.value,
                     }
                 else:
                     result[key] = field.value
@@ -291,9 +294,7 @@ class Response:
         }
 
         # Get the appropriate response handler based on method, or use default for unsupported methods
-        handler = context.get(
-            method, lambda: ({"error": "Method not allowed"}, 405)
-        )
+        handler = context.get(method, lambda: ({"error": "Method not allowed"}, 405))
 
         # Call the handler to get response data and status
         data, status = handler()
