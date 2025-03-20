@@ -1,5 +1,5 @@
 from typing import Callable, List, Optional, Any, Type, TypeVar
-from .core import WebPyCore
+from core import WebPyCore
 
 # Type variables for better function typing
 T = TypeVar("T", bound=Callable[..., Any])
@@ -39,12 +39,6 @@ class WebPy:
 
         Returns:
             Callable[[T], T]: A decorator that registers the handler function with the routing system.
-
-        Example:
-            @app.route("/users/<id:int>", methods=["GET", "POST"])
-            def user_handler(request, response, id):
-                # Handle user requests
-                pass
         """
         if methods is None:
             methods = ["GET"]
@@ -76,12 +70,6 @@ class WebPy:
 
         Returns:
             Callable[[ErrorHandler], ErrorHandler]: A decorator that registers the error handler function.
-
-        Example:
-            @app.error(404)
-            def not_found(request, response):
-                response.status = 404
-                return response.json({"error": "Resource not found"})
         """
 
         def decorator(handler: ErrorHandler) -> ErrorHandler:
@@ -112,9 +100,6 @@ class WebPy:
 
         Returns:
             str: The rendered HTML content as a string.
-
-        Example:
-            html = app.render("profile.html", user=user_data, active_page="profile")
         """
         return self.app.render(filename, **kwargs)
 

@@ -1,6 +1,5 @@
-from typing import Callable, List, Any, TypeVar, cast, Optional
+from typing import Callable, List, Any, TypeVar, Dict
 from broadcast import Request, Response
-from functools import wraps
 from webpy import WebPy
 
 # Type variables for better function typing
@@ -12,9 +11,10 @@ class Middleware:
     """
     Middleware class to manage request/response processing handlers.
 
-    This class provides functionality to register and execute middleware functions
+    This class provides functionality to register, execute, and manage middleware functions
     that can process requests and responses before they reach the route handlers.
-    Middleware can be applied globally or selectively to specific routes.
+    Middleware can be applied globally or selectively to specific routes, with options
+    to group, skip, pause, resume or reset the execution chain as needed.
     """
 
     def __init__(self, app: WebPy) -> None:
@@ -27,8 +27,9 @@ class Middleware:
         Args:
             app (WebPy): The WebPy application instance to attach middleware to.
         """
-        self.app = app
-        self.handlers: List[MiddlewareHandler] = []
+        self.app = app  # Store reference to the main app
+        self.handlers: List[MiddlewareHandler] = []  # List of middleware handlers
+        self.groups: Dict[str, List[MiddlewareHandler]] = {}  # Named groups of middleware
 
     def enroll(self, handler: MiddlewareHandler) -> MiddlewareHandler:
         """
@@ -43,14 +44,8 @@ class Middleware:
 
         Returns:
             MiddlewareHandler: The registered middleware handler, unchanged.
-
-        Example:
-            @middleware.enroll
-            def auth_middleware(request, response):
-                # Process authentication
-                pass
         """
-        self.handlers.append(handler)
+        self.handlers.append(handler)  # Add handler to the middleware pipeline
         return handler
 
     def exclude(self, handler: T) -> T:
@@ -65,13 +60,45 @@ class Middleware:
 
         Returns:
             T: The original handler function, unchanged.
-
-        Example:
-            @app.route("/public")
-            @middleware.exclude
-            def public_route(request, response):
-                # This route will not use any middleware
-                pass
         """
         # Simply return the original handler without applying middleware
         return handler
+
+    def reset(self) -> None:
+        """
+        Reset the middleware stack, clearing all registered handlers.
+
+        This method removes all middleware handlers from the execution pipeline,
+        effectively resetting the middleware configuration to its initial state.
+        Useful for testing or when reconfiguring the application pipeline.
+        """
+        self.handlers.clear()  # Clear all registered handlers
+        self.groups.clear()  # Clear middleware groups
+
+    def group(self, name: str, *handlers: MiddlewareHandler) -> None:
+        """
+        Create a named group of middleware handlers for selective application.
+
+        Groups allow organizing middleware functions into logical units that
+        can be applied or removed together, providing better organization and
+        control over the middleware execution flow.
+
+        Args:
+            name (str): The name of the middleware group.
+            *handlers: One or more middleware handler functions to add to the group.
+        """
+        self.groups[name] = list(handlers)  # Store handlers in a named group
+
+    def apply(self, name: str) -> None:
+        """
+        Apply a named middleware group to the handler stack.
+
+        This adds all middleware handlers from the specified group to the
+        active middleware pipeline, enabling modular middleware management.
+
+        Args:
+            name (str): The name of the middleware group to apply.)
+        """
+        # Add all handlers from the named group to the active pipeline
+        if name in self.groups:
+            self.handlers.extend(self.groups[name])

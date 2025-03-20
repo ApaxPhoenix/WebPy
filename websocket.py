@@ -3,70 +3,68 @@ import threading
 import json
 from typing import Callable, Dict, Any, Optional, List, Tuple, TypeVar, cast
 
-# Type variables for better function typing
+# Type variables for better type hinting
 T = TypeVar("T", bound=Callable[..., Any])
 EventHandler = Callable[[Any, socket.socket], None]
 
 
 class WebSocket:
     """
-    WebSocket class for managing WebSocket connections, event-based communication,
-    and real-time message handling similar to Socket.IO.
+    A lightweight WebSocket server implementation that provides event-based communication
+    similar to Socket.IO but with a simpler architecture.
 
-    This class provides functionality to create a WebSocket server, manage client
-    connections, register event handlers, and broadcast messages to connected clients.
-    It implements a simplified event-driven architecture for real-time communication.
+    This class enables real-time bidirectional communication between server and clients
+    through an event-driven architecture. It handles multiple client connections
+    concurrently using threading, manages connection lifecycle, and provides methods
+    for both receiving and broadcasting messages.
+
+    Features:
+    - Event registration through decorators
+    - JSON-based message format for structured communication
+    - Automatic connection management and cleanup
+    - Broadcast capability to all connected clients
     """
 
     def __init__(self, app: Any):
         """
-        Initialize the WebSocket with an application instance.
-
-        Sets up internal data structures for tracking client connections and
-        event handlers.
+        Initialize the WebSocket server with application context.
 
         Args:
-            app (Any): Application instance with which to register WebSocket connections.
-                      This allows integration with the main application.
+            app (Any): Parent application instance that this WebSocket server
+                      will be associated with. This allows the WebSocket server
+                      to access application resources and configuration.
         """
         self.app = app
-        # List to store all active client socket connections
+        # Store active client connections for broadcasting messages
         self.connections: List[socket.socket] = []
-        # Dictionary mapping event names to their handler functions
+        # Map event names to their handler functions
         self.events: Dict[str, EventHandler] = {}
 
     def on(self, event: str) -> Callable[[T], T]:
         """
-        Register a handler function for the specified event.
+        Decorator to register handler functions for specific events.
 
-        This decorator method allows event handlers to be easily defined and
-        registered for specific events. When the event is received from a client,
-        the corresponding handler will be executed.
+        When a client sends a message with the specified event name, the decorated
+        function will be called with the message data and client socket as arguments.
 
         Args:
-            event (str): The name of the event to listen for.
+            event (str): The event name to listen for in incoming messages.
 
         Returns:
-            Callable[[T], T]: Decorator function for registering event handlers.
-
-        Example:
-            @websocket.on("message")
-            def handle_message(data, client_socket):
-                # Process incoming message
-                print(f"Received message: {data}")
+            Callable[[T], T]: Decorator function that registers the handler.
         """
 
         def decorator(handler: T) -> T:
             """
-            Inner decorator function that registers the event handler.
+            Inner decorator function that registers the handler in the events dictionary.
 
             Args:
-                handler (T): The function that will handle the specified event.
+                handler (T): Function to be called when the event is received.
 
             Returns:
-                T: The original handler function, unchanged.
+                T: The original handler function (unchanged).
             """
-            # Register the event handler in the events dictionary
+            # Store the handler function in the events dictionary
             self.events[event] = cast(EventHandler, handler)
             return handler
 
@@ -74,132 +72,137 @@ class WebSocket:
 
     def emit(self, event: str, data: Optional[Dict[str, Any]] = None) -> None:
         """
-        Emit an event to all connected clients with the given data.
+        Broadcast an event with optional data to all connected clients.
 
-        Broadcasts a message with the specified event name and optional data
-        to all currently connected clients.
+        This method serializes the event and data as JSON and sends it to all
+        active client connections. It also handles cleanup of disconnected clients.
 
         Args:
-            event (str): The name of the event to emit.
+            event (str): Name of the event to emit.
             data (Optional[Dict[str, Any]]): Data payload to send with the event.
-                                            Defaults to an empty dictionary.
-
-        Example:
-            websocket.emit("notification", {"message": "New update available!"})
+                                           Defaults to an empty dictionary if None.
         """
-        # Create a message in JSON format with the event name and data
+        # Create JSON message with event name and data
         message = json.dumps({"event": event, "data": data or {}})
+        message = message.encode("utf-8")
 
-        # Iterate through all connections and send the message
+        # Track disconnected clients for cleanup
         clients = []
+
+        # Send message to all connected clients
         for connection in self.connections:
             try:
-                # Encode and send the message to the client
-                connection.sendall(message.encode("utf-8"))
+                connection.sendall(message)
             except (BrokenPipeError, ConnectionResetError):
-                # Mark connection for removal if sending fails
+                # Mark failed connections for removal
                 clients.append(connection)
 
-        # Clean up disconnected clients
+        # Remove disconnected clients from the active connections list
         for client in clients:
             if client in self.connections:
                 self.connections.remove(client)
 
-    def connection(self, conn: socket.socket, address: Tuple[str, int]) -> None:
+    def connect(self, connection: socket.socket, address: Tuple[str, int]) -> None:
         """
-        Manage an individual WebSocket connection from a client.
+        Handle a client connection in a dedicated thread.
 
-        This method runs in a separate thread for each client connection. It handles
-        incoming messages, parses JSON data, and calls the appropriate event handlers.
+        This method maintains the lifecycle of a single client connection, including:
+        - Receiving and parsing messages
+        - Dispatching events to registered handlers
+        - Handling connection errors and cleanup
 
         Args:
-            conn (socket.socket): Client connection socket object.
-            address (Tuple[str, int]): Client addressess as a tuple of (host, port).
+            connection (socket.socket): Client socket connection object.
+            address (Tuple[str, int]): Client address as (host, port) tuple.
         """
-        # Add the client connection to the list of active connections
-        self.connections.append(conn)
+        # Register this connection in the active connections list
+        self.connections.append(connection)
         print(f"Client connected from {address}")
 
         try:
+            # Message processing loop for this client
             while True:
-                # Receive data from the client (up to 1024 bytes)
-                message = conn.recv(1024).decode("utf-8")
+                # Receive data from client with buffer size of 1024 bytes
+                message = connection.recv(1024).decode("utf-8")
 
-                # If no message is received, the client has disconnected
+                # Empty message indicates client disconnection
                 if not message:
                     break
 
                 try:
-                    # Parse the received JSON message
+                    # Parse received JSON message
                     content = json.loads(message)
 
-                    # Extract the event name and data from the message
+                    # Extract event name and data payload
                     event = content.get("event")
                     data = content.get("data", {})
 
-                    # Call the appropriate event handler if registered
+                    # Dispatch to registered handler if event exists
                     if event in self.events:
-                        self.events[event](data, conn)
+                        self.events[event](data, connection)
                 except json.JSONDecodeError:
                     print(f"Received invalid JSON from {address}")
 
         except ConnectionResetError:
-            # Handle abrupt client disconnection
+            # Handle case when client disconnects unexpectedly
             print(f"Connection reset by client {address}")
         except Exception as error:
-            # Handle other exceptions
+            # Catch and log other unexpected errors
             print(f"Error handling client {address}: {str(error)}")
         finally:
+            # Clean up the connection regardless of how it ended
             print(f"Client disconnected from {address}")
-            # Remove the client from active connections and close the socket
-            if conn in self.connections:
-                self.connections.remove(conn)
-            conn.close()
+            if connection in self.connections:
+                self.connections.remove(connection)
+            connection.close()
 
     def run(self, host: str = "127.0.0.1", port: int = 8081) -> None:
         """
         Start the WebSocket server and listen for incoming connections.
 
-        This method initializes the server socket, binds it to the specified host
-        and port, and starts accepting client connections in separate threads.
+        This method sets up the server socket, binds to the specified address,
+        and enters a loop that accepts new connections. Each new connection is
+        handled in a separate thread.
 
         Args:
-            host (str): Host IP addressess to bind the server. Defaults to "127.0.0.1" (localhost).
-            port (int): Port number to bind the server. Defaults to 8081.
+            host (str): IP address to bind the server to.
+                       Defaults to "127.0.0.1" (localhost).
+            port (int): Port number to listen on. Defaults to 8081.
 
         Note:
-            This method runs indefinitely until the program is terminated.
+            This method blocks indefinitely until interrupted (e.g., by Ctrl+C).
+            The server socket will be properly closed on exit.
         """
-        # Create a new TCP socket using IPv4 addressessing
+        # Create TCP/IP socket using IPv4 addressing
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        # Set socket option to allow addressess reuse (helpful for server restarts)
+        # Allow socket to reuse the address (prevents "Address already in use" errors)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        # Bind the socket to the specified host and port
+        # Bind to specified network interface and port
         server.bind((host, port))
 
-        # Listen for incoming connections with a backlog queue of 5
+        # Start listening with connection backlog of 5
         server.listen(5)
         print(f"WebSocket server running on ws://{host}:{port}")
 
         try:
-            # Continuously accept and handle incoming connections
+            # Main server loop
             while True:
-                # Accept a new client connection
+                # Accept new client connection (blocks until connection arrives)
                 connection, address = server.accept()
 
-                # Start a new thread to handle this client connection
+                # Create and start thread to handle this client connection
                 thread = threading.Thread(
-                    target=self.connection, args=(connection, address)
+                    target=self.connect, args=(connection, address)
                 )
-                thread.daemon = (
-                    True  # Set as daemon so thread exits when main program does
-                )
+                # Set as daemon thread so it terminates when main thread exits
+                thread.daemon = True
                 thread.start()
 
         except KeyboardInterrupt:
+            # Handle server shutdown on Ctrl+C
             print("Server shutting down...")
         finally:
-            # Close the server socket
+            # Ensure server socket is closed properly
             server.close()

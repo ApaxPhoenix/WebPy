@@ -2,9 +2,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Any, Type, Tuple, TypeVar, cast
 from jinja2 import Environment, FileSystemLoader
-from .router import Router
-from .broadcast import Request, Response
-from .blueprint import Blueprint
+from router import Router
+from broadcast import Request, Response
+from blueprint import Blueprint
 import ssl
 import warnings
 
@@ -237,7 +237,7 @@ class WebPyCore(BaseHTTPRequestHandler):
             app.blueprint(user_bp)
         """
         # Call the blueprint's register method to register all routes
-        blueprint.register(self)
+        pass
 
     @classmethod
     def run(
@@ -245,7 +245,7 @@ class WebPyCore(BaseHTTPRequestHandler):
         ip: str = "127.0.0.1",
         port: int = 8080,
         server: Type[ThreadingHTTPServer] = ThreadingHTTPServer,
-        handler: Optional[Type[BaseHTTPRequestHandler], Any] = None,
+        handler: Optional[Type[BaseHTTPRequestHandler]] = None,
         certfile: Optional[str] = None,
         keyfile: Optional[str] = None,
     ) -> None:

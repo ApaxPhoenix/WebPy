@@ -1,8 +1,8 @@
 import json
-import cgi
 from typing import Any, Dict, Optional, Union, List, cast
 from urllib.parse import parse_qs, urlparse, ParseResult
 from http.server import BaseHTTPRequestHandler
+import warnings
 
 # Type aliases for better code clarity
 QueryDict = Dict[str, List[str]]  # The actual return type of parse_qs
@@ -17,7 +17,7 @@ class Request:
 
     This class provides an abstraction layer over the raw HTTP request,
     offering convenient access to common request properties such as
-    method, path, headers, and query parameters.
+    method, path, headers, query parameters, cookies, and more.
 
     Attributes:
         handler (BaseHTTPRequestHandler): The underlying HTTP request handler.
@@ -37,7 +37,6 @@ class Request:
         # Parse the request path and query string into component parts
         self.parsing: ParseResult = urlparse(self.handler.path)
         # Parse query parameters and store them as a dictionary
-        # Note: parse_qs returns Dict[str, List[str]] where each parameter can have multiple values
         self.querier: QueryDict = parse_qs(self.parsing.query)
 
     @property
@@ -48,9 +47,7 @@ class Request:
         Returns:
             str: The HTTP request method (e.g., "GET", "POST", "PUT", "DELETE").
         """
-        return cast(
-            str, self.handler.command
-        )  # Handler's command stores the HTTP method
+        return cast(str, self.handler.command)
 
     @property
     def path(self) -> str:
@@ -62,7 +59,7 @@ class Request:
         Returns:
             str: The request path (e.g., "/users/profile").
         """
-        return self.parsing.path  # The path component of the parsed URL
+        return self.parsing.path
 
     @property
     def fragment(self) -> str:
@@ -72,7 +69,7 @@ class Request:
         Returns:
             str: The URL fragment or empty string if none exists.
         """
-        return self.parsing.fragment  # The fragment component of the parsed URL
+        return self.parsing.fragment
 
     @property
     def headers(self) -> HeadersDict:
@@ -82,9 +79,7 @@ class Request:
         Returns:
             Dict[str, str]: A dictionary mapping header names to their values.
         """
-        return dict(
-            self.handler.headers
-        )  # Convert headers to a dictionary for easy access
+        return dict(self.handler.headers)
 
     @property
     def queries(self) -> Dict[str, Union[str, List[str]]]:
@@ -97,8 +92,17 @@ class Request:
             Dict[str, Union[str, List[str]]]: A dictionary of query parameters parsed from the URL.
                                              Values may be strings or lists of strings.
         """
-        # Return the parsed query parameters with proper typing
         return self.querier
+
+    @property
+    def ip(self) -> str:
+        """
+        Get the client's IP address.
+
+        Returns:
+            str: The client's IP address.
+        """
+        return self.handler.client_address[0]
 
     def json(self) -> Optional[JsonData]:
         """
@@ -111,71 +115,14 @@ class Request:
             Optional[Dict[str, Any]]: The JSON data parsed from the request body,
                                      or None if no data is present or parsing fails.
         """
-        # Get content length from headers, defaulting to 0 if not present
         length = int(self.headers.get("Content-Length", "0"))
-
-        # Only attempt to read and parse JSON if content length is positive
         if length > 0:
             try:
-                # Read binary data from the request body based on content length
                 data = self.handler.rfile.read(length)
-                # Decode binary data to UTF-8 string and parse as JSON
                 return json.loads(data.decode("utf-8"))
             except (json.JSONDecodeError, UnicodeDecodeError):
-                # Return None if JSON parsing fails
                 return None
-        return None  # Return None if no data to parse
-
-    def form(self) -> FormData:
-        """
-        Parse the request body as form data.
-
-        This method processes form data from the request body based on Content-Type.
-        It handles both application/x-www-form-urlencoded and multipart/form-data formats.
-
-        Returns:
-            Dict[str, Any]: A dictionary of form fields and their values.
-                         Returns an empty dict if no form data is present.
-        """
-
-        # If there's no Content-Type or Content-Length, return empty dict
-        if (
-            not self.headers.get("Content-Type", "")
-            or int(self.headers.get("Content-Length", "0")) <= 0
-        ):
-            return {}
-
-        try:
-            # Use cgi.FieldStorage to parse form data
-            data = cgi.FieldStorage(
-                fp=self.handler.rfile,
-                headers=self.handler.headers,
-                environ={
-                    "REQUEST_METHOD": self.method,
-                    "CONTENT_TYPE": self.headers.get("Content-Type", ""),
-                },
-            )
-
-            # Convert form data to dictionary, handling both simple fields and file uploads
-            result = {}
-            for key in data.keys():
-                field = data[key]
-                # Handle file uploads separately if needed
-                if field.filename:
-                    result[key] = {
-                        "filename": field.filename,
-                        "type": field.type,
-                        "value": field.value,
-                    }
-                else:
-                    result[key] = field.value
-
-            return result
-
-        except Exception:
-            # Return empty dict if parsing fails
-            return {}
-
+        return None
 
 class Response:
     """
@@ -307,6 +254,71 @@ class Response:
 
         # Encode response data to JSON format in bytes
         self.body = json.dumps(data).encode("utf-8")
+
+        # Return self for method chaining
+        return self
+
+    def serve(self, filepath: str, mime: Optional[str] = None) -> "Response":
+        """
+        Serve a static file to the client.
+
+        Args:
+            filepath (str): The path to the file to serve.
+            mime (Optional[str]): The MIME type of the file (optional).
+
+        Returns:
+            Response: Self, for method chaining.
+        """
+        try:
+            with open(filepath, "rb") as file:
+                self.body = file.read()
+
+            # Set Content-Type header if MIME type is provided
+            if mime:
+                self.headers["Content-Type"] = mime
+            else:
+                # Guess MIME type based on file extension
+                import mimetypes
+                mime, _ = mimetypes.guess_type(filepath)
+                if mime:
+                    self.headers["Content-Type"] = mime
+
+            # Set Content-Length header
+            self.headers["Content-Length"] = str(len(self.body))
+
+        except FileNotFoundError:
+            warnings.warn("File not found")
+
+        return self
+
+    def redirect(self, url: str, status: int = 302) -> "Response":
+        """
+        Set up a redirect response to a different URL.
+
+        This method configures the response with appropriate status code and
+        Location header to redirect the client to the specified URL.
+
+        Args:
+            url (str): The URL to redirect to.
+            status (int): The HTTP status code for the redirect (defaults to 302 Found).
+                         Common redirect status codes:
+                         - 301: Moved Permanently
+                         - 302: Found (temporary redirect)
+                         - 303: See Other
+                         - 307: Temporary Redirect
+                         - 308: Permanent Redirect
+
+        Returns:
+            Response: Self, for method chaining.
+        """
+        # Set the redirect status code
+        self.status = status
+
+        # Set the Location header with the target URL
+        self.headers["Location"] = url
+
+        # Set an empty body for the redirect response
+        self.body = b""
 
         # Return self for method chaining
         return self
