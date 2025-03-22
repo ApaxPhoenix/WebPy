@@ -6,296 +6,313 @@ from urllib.parse import quote, unquote
 
 class Sessions:
     """
-    A comprehensive class for managing HTTP cookies using SimpleCookie.
-    This class provides a convenient interface for adding, retrieving, updating,
-    and removing HTTP cookies, which are commonly used for session management,
-    user preferences, and other client-side storage needs.
+    Cookie management system for HTTP session handling.
+
+    Provides a comprehensive interface for managing browser cookies with support
+    for creating, reading, updating, and deleting cookies with fine-grained control
+    over security attributes, expiration, and cross-site behavior.
+
+    The Sessions class abstracts away the complexity of cookie handling while
+    enforcing best practices for secure cookie management in web applications.
     """
 
     def __init__(self) -> None:
         """
-        Initialize the Sessions class with an empty SimpleCookie object.
+        Initialize a new cookie management instance.
 
-        This constructor creates a new instance of the Sessions class with a fresh
-        SimpleCookie container that will store all cookie information.
+        Creates an empty SimpleCookie container that will store and track
+        all cookie operations throughout the application lifecycle.
         """
-        self.cookies = SimpleCookie()
+        self.container = SimpleCookie()
 
     def add(
             self,
-            cookie: Union[str, Dict[str, str]],
+            identity: Union[str, Dict[str, str]],
             value: Optional[str] = None,
             path: str = "/",
             domain: Optional[str] = None,
             secure: bool = False,
             httponly: bool = False,
-            onsite: Optional[str] = None,
+            samesite: Optional[str] = None,
             expires: Optional[int] = None,
-            longevity: Optional[int] = None,
+            maxage: Optional[int] = None,
     ) -> Union[None, Dict[str, bool]]:
         """
-        Add a new cookie or multiple cookies to the SimpleCookie storage.
+        Create new cookie(s) with specified attributes.
 
-        This method allows adding cookies with various attributes such as path, domain,
-        security settings, and expiration details. It can handle either a single cookie
-        or multiple cookies through a dictionary.
+        Adds one or multiple cookies to the session management system with
+        configurable security features and expiration settings. Supports both
+        individual and bulk cookie creation.
 
-        Args:
-            cookie (Union[str, Dict[str, str]]): The name of the cookie or a dictionary of cookie names and values.
-            value (Optional[str]): The value to assign to the cookie (required if `cookie` is a string).
-            path (str): The URL path for which the cookie is valid. Defaults to "/".
-            domain (Optional[str]): The domain for which the cookie is valid.
-            secure (bool): Whether the cookie should only be transmitted over HTTPS.
-            httponly (bool): Whether the cookie should be accessible only through HTTP.
-            onsite (Optional[str]): Controls whether the cookie is sent with cross-site requests.
-            expires (Optional[int]): Expiration time for the cookie in seconds from the current time.
-            longevity (Optional[int]): Maximum age of the cookie in seconds.
+        Parameters:
+            identity: Cookie name or dictionary of cookie name-value pairs
+            value: Cookie value (required when identity is a string)
+            path: URL path scope for the cookie (defaults to root path)
+            domain: Domain scope for the cookie
+            secure: Restrict cookie to HTTPS connections only
+            httponly: Prevent JavaScript access to the cookie
+            samesite: Cross-site request policy ("Strict", "Lax", or "None")
+            expires: Seconds from now until cookie expiration
+            maxage: Maximum cookie lifetime in seconds
 
         Returns:
-            Union[None, Dict[str, bool]]: None if adding a single cookie, or a dictionary of cookie names and success statuses if adding multiple cookies.
+            None for single cookie creation, or dictionary of success statuses
+            for bulk cookie creation
 
         Raises:
-            ValueError: If no value is provided when adding a single cookie or if an invalid onsite value is specified.
+            ValueError: When missing value for single cookie or invalid samesite value
         """
-        if isinstance(cookie, dict):
+        if isinstance(identity, dict):
             results = {}
-            for name, value in cookie.items():
-                self.cookies[name] = quote(value)
-                self.cookies[name]["path"] = path
+            for name, content in identity.items():
+                self.container[name] = quote(content)
+                self.container[name]["path"] = path
 
                 if domain:
-                    self.cookies[name]["domain"] = domain
+                    self.container[name]["domain"] = domain
                 if secure:
-                    self.cookies[name]["secure"] = True
+                    self.container[name]["secure"] = True
                 if httponly:
-                    self.cookies[name]["httponly"] = True
-                if onsite:
-                    rules = ["Strict", "Lax", "None"]
-                    if onsite in rules:
-                        self.cookies[name]["onsite"] = onsite
+                    self.container[name]["httponly"] = True
+
+                if samesite:
+                    policies = ["Strict", "Lax", "None"]
+                    if samesite in policies:
+                        self.container[name]["samesite"] = samesite
                     else:
-                        raise ValueError(f"Invalid onsite value: {onsite}. Must be one of {rules}")
+                        raise ValueError(f"Invalid samesite value: {samesite}. Must be one of {policies}")
+
                 if expires:
                     expiration = time.time() + expires
-                    self.cookies[name]["expires"] = time.strftime(
+                    self.container[name]["expires"] = time.strftime(
                         "%a, %d %b %Y %H:%M:%S GMT", time.gmtime(expiration))
-                if longevity:
-                    self.cookies[name]["longevity"] = str(longevity)
+
+                if maxage:
+                    self.container[name]["max-age"] = str(maxage)
 
                 results[name] = True
             return results
         else:
             if value is None:
                 raise ValueError("Value must be provided when adding a single cookie.")
-            self.cookies[cookie] = quote(value)
-            self.cookies[cookie]["path"] = path
+
+            self.container[identity] = quote(value)
+            self.container[identity]["path"] = path
 
             if domain:
-                self.cookies[cookie]["domain"] = domain
+                self.container[identity]["domain"] = domain
             if secure:
-                self.cookies[cookie]["secure"] = True
+                self.container[identity]["secure"] = True
             if httponly:
-                self.cookies[cookie]["httponly"] = True
-            if onsite:
-                rules = ["Strict", "Lax", "None"]
-                if onsite in rules:
-                    self.cookies[cookie]["onsite"] = onsite
+                self.container[identity]["httponly"] = True
+
+            if samesite:
+                policies = ["Strict", "Lax", "None"]
+                if samesite in policies:
+                    self.container[identity]["samesite"] = samesite
                 else:
-                    raise ValueError(f"Invalid samesit value: {onsite}. Must be one of {rules}")
+                    raise ValueError(f"Invalid samesite value: {samesite}. Must be one of {policies}")
+
             if expires:
                 expiration = time.time() + expires
-                self.cookies[cookie]["expires"] = time.strftime(
+                self.container[identity]["expires"] = time.strftime(
                     "%a, %d %b %Y %H:%M:%S GMT", time.gmtime(expiration))
-            if longevity:
-                self.cookies[cookie]["longevity"] = str(longevity)
 
-    def get(self, cookie: Union[str, List[str]], default: Optional[str] = None) -> Union[
+            if maxage:
+                self.container[identity]["max-age"] = str(maxage)
+
+    def get(self, identity: Union[str, List[str]], default: Optional[str] = None) -> Union[
         Optional[str], Dict[str, Optional[str]]]:
         """
-        Retrieve the value of a cookie or multiple cookies.
+        Retrieve cookie value(s) from the session.
 
-        This method allows fetching the values of cookies from the storage. It can
-        retrieve either a single cookie value or multiple cookie values, with support
-        for a default return value if a cookie doesn't exist.
+        Extracts the value of one or multiple cookies, with support for
+        default values when cookies don't exist.
 
-        Args:
-            cookie (Union[str, List[str]]): The name of the cookie or a list of cookie names.
-            default (Optional[str]): The value to return if the cookie is not found.
+        Parameters:
+            identity: Cookie name or list of cookie names to retrieve
+            default: Fallback value when cookie doesn't exist
 
         Returns:
-            Union[Optional[str], Dict[str, Optional[str]]]: The value of the cookie if a single cookie is requested,
-            or a dictionary of cookie names and values if multiple cookies are requested.
+            Single cookie value or dictionary of cookie values mapped by name
         """
-        if isinstance(cookie, list):
+        if isinstance(identity, list):
             results = {}
-            for name in cookie:
+            for name in identity:
                 results[name] = self.get(name, default)
             return results
         else:
-            if cookie in self.cookies:
-                return unquote(self.cookies[cookie].value)
+            if identity in self.container:
+                return unquote(self.container[identity].value)
             return default
 
     def update(
             self,
-            cookie: Union[str, Dict[str, str]],
+            identity: Union[str, Dict[str, str]],
             value: Optional[str] = None,
-            attributes: bool = True,
+            preserve: bool = True,
     ) -> Union[bool, Dict[str, bool]]:
         """
-        Update an existing cookie's value or multiple cookies' values.
+        Modify existing cookie value(s) with option to retain attributes.
 
-        This method modifies the value of cookies that already exist in the storage.
-        It can update either a single cookie or multiple cookies at once. When updating,
-        you can choose whether to preserve the existing cookie attributes.
+        Updates one or multiple cookies that already exist in the session,
+        with the choice to preserve or reset existing cookie attributes.
 
-        Args:
-            cookie (Union[str, Dict[str, str]]): The name of the cookie or a dictionary of cookie names and values.
-            value (Optional[str]): The new value to assign to the cookie (required if `cookie` is a string).
-            attributes (bool): Whether to preserve existing cookie attributes.
+        Parameters:
+            identity: Cookie name or dictionary of cookie name-value pairs
+            value: New cookie value (required when identity is a string)
+            preserve: Whether to maintain existing cookie attributes
 
         Returns:
-            Union[bool, Dict[str, bool]]]: True if the cookie was found and updated, or a dictionary of cookie names and success statuses if updating multiple cookies.
+            Success status for single update or dictionary of success statuses
 
         Raises:
-            ValueError: If no value is provided when updating a single cookie.
+            ValueError: When missing value for single cookie update
         """
-        if isinstance(cookie, dict):
+        if isinstance(identity, dict):
             results = {}
-            for name, value in cookie.items():
-                results[name] = self.update(name, value, attributes)
+            for name, content in identity.items():
+                results[name] = self.update(name, content, preserve)
             return results
         else:
             if value is None:
                 raise ValueError("Value must be provided when updating a single cookie.")
-            if cookie in self.cookies:
-                if attributes:
-                    attribute = {key: value for key, value in self.cookies[cookie].items() if key != "value"}
-                    self.cookies[cookie] = quote(value)
-                    for key, value in attribute.items():
-                        self.cookies[cookie][key] = value
+
+            if identity in self.container:
+                if preserve:
+                    properties = {key: val for key, val in self.container[identity].items() if key != "value"}
+                    self.container[identity] = quote(value)
+                    for key, val in properties.items():
+                        self.container[identity][key] = val
                 else:
-                    self.cookies[cookie] = quote(value)
+                    self.container[identity] = quote(value)
                 return True
             return False
 
-    def remove(self, cookie: Union[str, List[str]]) -> Union[bool, Dict[str, bool]]:
+    def remove(self, identity: Union[str, List[str]]) -> Union[bool, Dict[str, bool]]:
         """
-        Remove a cookie or multiple cookies from the internal storage.
+        Delete cookie(s) from the session container.
 
-        This method deletes cookies from the internal storage. It doesn't affect cookies
-        already set on the client side - use the expire() method for that purpose.
-        It can remove either a single cookie or multiple cookies at once.
+        Removes one or multiple cookies from internal tracking, without
+        affecting cookies already set on the client side.
 
-        Args:
-            cookie (Union[str, List[str]]): The name of the cookie or a list of cookie names.
+        Parameters:
+            identity: Cookie name or list of cookie names to remove
 
         Returns:
-            Union[bool, Dict[str, bool]]]: True if the cookie was found and removed, or a dictionary of cookie names and removal statuses if removing multiple cookies.
+            Success status for single removal or dictionary of success statuses
         """
-        if isinstance(cookie, list):
+        if isinstance(identity, list):
             results = {}
-            for name in cookie:
+            for name in identity:
                 results[name] = self.remove(name)
             return results
         else:
-            if cookie in self.cookies:
-                del self.cookies[cookie]
+            if identity in self.container:
+                del self.container[identity]
                 return True
             return False
 
-    def expire(self, cookie: Union[str, List[str]], path: str = "/", domain: Optional[str] = None) -> Union[
+    def expire(self, identity: Union[str, List[str]], path: str = "/", domain: Optional[str] = None) -> Union[
         bool, Dict[str, bool]]:
         """
-        Expire a cookie or multiple cookies on the client side.
+        Force cookie expiration on the client browser.
 
-        This method sets cookies to expire immediately, effectively removing them
-        from the client browser. It does this by setting the cookies' expiration date
-        to a past date and the max-age attribute to 0. This method is useful for
-        logging users out or clearing sensitive information.
+        Sets cookies to expire immediately by setting expiration date
+        to the past and max-age to zero, effectively removing them from
+        the client browser on the next response.
 
-        Args:
-            cookie (Union[str, List[str]]): The name of the cookie or a list of cookie names.
-            path (str): The path of the cookies to expire.
-            domain (Optional[str]): The domain of the cookies to expire.
+        Parameters:
+            identity: Cookie name or list of cookie names to expire
+            path: Path scope matching the cookies to expire
+            domain: Domain scope matching the cookies to expire
 
         Returns:
-            Union[bool, Dict[str, bool]]: True if the operation was successful, or a dictionary of cookie names and expiration statuses if expiring multiple cookies.
+            Success status for single expiration or dictionary of success statuses
         """
-        if isinstance(cookie, list):
+        if isinstance(identity, list):
             results = {}
-            for name in cookie:
+            for name in identity:
                 results[name] = self.expire(name, path, domain)
             return results
         else:
-            self.cookies[cookie] = ""
-            self.cookies[cookie]["path"] = path
+            self.container[identity] = ""
+            self.container[identity]["path"] = path
+
             if domain:
-                self.cookies[cookie]["domain"] = domain
-            self.cookies[cookie]["expires"] = "Thu, 01 Jan 1970 00:00:00 GMT"
-            self.cookies[cookie]["max-age"] = "0"
+                self.container[identity]["domain"] = domain
+
+            # Set expiration to the past (Unix epoch)
+            self.container[identity]["expires"] = "Thu, 01 Jan 1970 00:00:00 GMT"
+
+            # Set max-age to zero for immediate expiration
+            self.container[identity]["max-age"] = "0"
+
             return True
 
     def all(self) -> Dict[str, str]:
         """
-        Retrieve all cookies as a dictionary of name-value pairs.
+        Retrieve all cookie values as a simple dictionary.
 
-        This method provides a convenient way to get all cookies currently stored in
-        the Sessions object as a simple dictionary, with cookie names as keys and
-        cookie values as the corresponding values.
-
-        Returns:
-            Dict[str, str]: A dictionary containing all cookie names and their values.
-        """
-        return {key: unquote(morsel.value) for key, morsel in self.cookies.items()}
-
-    def exists(self, cookie: str) -> bool:
-        """
-        Check if a cookie exists in the storage.
-
-        This method determines whether a specific cookie is present in the internal
-        storage, regardless of its value.
-
-        Args:
-            cookie (str): The name of the cookie to check.
+        Provides a straightforward name-value mapping of all cookies
+        currently managed by the session, with values properly decoded.
 
         Returns:
-            bool: True if the cookie exists, False otherwise.
+            Dictionary of all cookie names and their decoded values
         """
-        return cookie in self.cookies
+        return {name: unquote(morsel.value) for name, morsel in self.container.items()}
+
+    def exists(self, identity: str) -> bool:
+        """
+        Check for cookie existence in the session.
+
+        Determines whether a specific cookie is present in the
+        session container, regardless of its value.
+
+        Parameters:
+            identity: Cookie name to check
+
+        Returns:
+            True if cookie exists, False otherwise
+        """
+        return identity in self.container
 
     def headers(self) -> str:
         """
-        Get the complete Set-Cookie header string.
+        Generate complete Set-Cookie HTTP header string.
 
-        This method generates the HTTP header string for setting all cookies currently
-        in the Sessions object. The resulting string can be directly included in HTTP
-        response headers.
-
-        Returns:
-            str: The Set-Cookie HTTP header string.
-        """
-        return self.cookies.output(header="", sep="\r\nSet-Cookie: ")
-
-    def attributes(self, cookie: str) -> Dict[str, str]:
-        """
-        Get a cookie with all its attributes.
-
-        This method retrieves all attributes of a specific cookie, including its value
-        and any other properties like path, domain, expiration, etc. It's useful for
-        inspecting the full configuration of a cookie.
-
-        Args:
-            cookie (str): The name of the cookie to get attributes for.
+        Creates properly formatted HTTP headers for setting all
+        cookies currently in the session container, ready for
+        inclusion in HTTP responses.
 
         Returns:
-            Dict[str, str]: A dictionary containing all attributes of the cookie, or an empty dictionary if the cookie doesn't exist.
+            Complete Set-Cookie header string for HTTP response
         """
-        if cookie not in self.cookies:
+        return self.container.output(header="", sep="\r\nSet-Cookie: ")
+
+    def attributes(self, identity: str) -> Dict[str, str]:
+        """
+        Extract all properties of a specific cookie.
+
+        Retrieves the complete configuration of a cookie including
+        its value and all security attributes, expiration settings,
+        and other properties.
+
+        Parameters:
+            identity: Cookie name to inspect
+
+        Returns:
+            Dictionary of all cookie attributes or empty dict if cookie not found
+        """
+        if identity not in self.container:
             return {}
-        morsel = self.cookies[cookie]
-        attributes = {"value": unquote(morsel.value)}
-        for key, value in morsel.items():
+
+        morsel = self.container[identity]
+        properties = {"value": unquote(morsel.value)}
+
+        # Add all non-value attributes
+        for key, val in morsel.items():
             if key != "value":
-                attributes[key] = value
-        return attributes
+                properties[key] = val
+
+        return properties

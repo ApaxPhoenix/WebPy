@@ -1,225 +1,230 @@
 import json
-from typing import Any, Dict, Optional, Union, List, cast
+from typing import Any, Dict, Optional, Union, List, cast, TypeVar, Callable
 from urllib.parse import parse_qs, urlparse, ParseResult
 from http.server import BaseHTTPRequestHandler
 import warnings
+import mimetypes
+from pathlib import Path
 
-# Type aliases for better code clarity
-QueryDict = Dict[str, List[str]]  # The actual return type of parse_qs
-HeadersDict = Dict[str, str]
-JsonData = Dict[str, Any]
-FormData = Dict[str, Any]  # Type alias for form data
+# Type variables for fluent interface pattern
+R = TypeVar('R', bound='Response')
+
+# Type aliases for semantic clarity
+QueryDict = Dict[str, List[str]]  # Result structure from parse_qs
+HeadersDict = Dict[str, str]  # HTTP headers mapping
+JsonData = Dict[str, Any]  # JSON-serializable dictionary
+FormData = Dict[str, Any]  # Form submission data
+HttpHandler = BaseHTTPRequestHandler  # HTTP server handler
 
 
 class Request:
     """
-    A Request object to encapsulate details of an HTTP request.
+    HTTP request encapsulation providing structured access to request data.
 
-    This class provides an abstraction layer over the raw HTTP request,
-    offering convenient access to common request properties such as
-    method, path, headers, query parameters, cookies, and more.
+    Abstracts the underlying HTTP request details into a convenient interface,
+    offering simple property access to common request components including
+    method, path, query parameters, headers, and body content.
 
-    Attributes:
-        handler (BaseHTTPRequestHandler): The underlying HTTP request handler.
-        parsing (ParseResult): Parsed URL components of the request path.
-        querier (QueryDict): Parsed query parameters from the URL.
+    This class simplifies request processing by parsing raw HTTP data into
+    structured objects and providing type-safe accessors for common operations.
     """
 
-    def __init__(self, handler: BaseHTTPRequestHandler) -> None:
+    def __init__(self, handler: HttpHandler) -> None:
         """
-        Initialize a Request object with the provided HTTP handler.
+        Initialize request object from raw HTTP handler.
 
-        Args:
-            handler (BaseHTTPRequestHandler): The HTTP request handler containing
-                                             raw request information.
+        Parameters:
+            handler: Raw HTTP request handler containing connection details
         """
-        self.handler = handler
-        # Parse the request path and query string into component parts
-        self.parsing: ParseResult = urlparse(self.handler.path)
-        # Parse query parameters and store them as a dictionary
-        self.querier: QueryDict = parse_qs(self.parsing.query)
+        self.handler: HttpHandler = handler
+        # Extract and parse URL components
+        self.components: ParseResult = urlparse(self.handler.path)
+        # Parse query string into structured dictionary
+        self.parameters: QueryDict = parse_qs(self.components.query)
 
     @property
     def method(self) -> str:
         """
-        Get the HTTP request method.
+        Retrieve the HTTP method used for this request.
 
         Returns:
-            str: The HTTP request method (e.g., "GET", "POST", "PUT", "DELETE").
+            Uppercase HTTP method string (GET, POST, PUT, DELETE, etc.)
         """
         return cast(str, self.handler.command)
 
     @property
     def path(self) -> str:
         """
-        Get the request path component of the URL.
-
-        This excludes query parameters and fragments.
+        Extract the URL path component without query parameters.
 
         Returns:
-            str: The request path (e.g., "/users/profile").
+            URL path starting with forward slash (e.g., "/users/profile")
         """
-        return self.parsing.path
+        return self.components.path
 
     @property
     def fragment(self) -> str:
         """
-        Get the URL fragment (the part after '#').
+        Extract the URL fragment identifier (portion after #).
 
         Returns:
-            str: The URL fragment or empty string if none exists.
+            Fragment string without the # character, or empty string if none
         """
-        return self.parsing.fragment
+        return self.components.fragment
 
     @property
     def headers(self) -> HeadersDict:
         """
-        Get all request headers as a dictionary.
+        Access all HTTP request headers.
 
         Returns:
-            Dict[str, str]: A dictionary mapping header names to their values.
+            Dictionary mapping header names to their values
         """
         return dict(self.handler.headers)
 
     @property
     def queries(self) -> Dict[str, Union[str, List[str]]]:
         """
-        Get the query parameters from the URL.
+        Access query parameters from URL.
 
-        Note that each parameter can have multiple values if specified multiple times in the URL.
+        Provides structured access to URL query parameters, handling
+        multiple values for the same parameter name appropriately.
 
         Returns:
-            Dict[str, Union[str, List[str]]]: A dictionary of query parameters parsed from the URL.
-                                             Values may be strings or lists of strings.
+            Dictionary where keys are parameter names and values are either
+            single strings or lists of strings for multi-valued parameters
         """
-        return self.querier
+        return self.parameters
 
     @property
     def ip(self) -> str:
         """
-        Get the client's IP address.
+        Get client's IP address.
 
         Returns:
-            str: The client's IP address.
+            String representation of client's IP address
         """
         return self.handler.client_address[0]
 
     def json(self) -> Optional[JsonData]:
         """
-        Parse the request body as JSON.
+        Parse request body as JSON data.
 
-        This method reads the request body data and attempts to parse it as JSON.
-        It only reads data if Content-Length header is present and non-zero.
+        Attempts to read and parse the request body as JSON if Content-Length
+        header indicates data is available. Handles encoding and parsing errors
+        gracefully by returning None.
 
         Returns:
-            Optional[Dict[str, Any]]: The JSON data parsed from the request body,
-                                     or None if no data is present or parsing fails.
+            Parsed JSON data as dictionary, or None if parsing fails or no data present
         """
-        length = int(self.headers.get("Content-Length", "0"))
+        length: int = int(self.headers.get("Content-Length", "0"))
         if length > 0:
             try:
-                data = self.handler.rfile.read(length)
-                return json.loads(data.decode("utf-8"))
+                content: bytes = self.handler.rfile.read(length)
+                return json.loads(content.decode("utf-8"))
             except (json.JSONDecodeError, UnicodeDecodeError):
                 return None
         return None
 
+
 class Response:
     """
-    A Response object to encapsulate and build HTTP responses.
+    HTTP response builder with fluent interface for chaining operations.
 
-    This class provides methods for constructing HTTP responses with
-    different status codes, headers, and body formats (especially JSON).
+    Provides a clean API for constructing HTTP responses with various
+    content types, status codes, and headers. Supports method chaining
+    for concise response construction.
 
-    Attributes:
-        handler (BaseHTTPRequestHandler): The HTTP request handler used to send the response.
-        status (int): The HTTP status code for the response (defaults to 200 OK).
-        headers (Dict[str, str]): A dictionary of response headers.
-        body (bytes): The response body as bytes.
+    Features include:
+    - Content type-specific methods (json, text, html)
+    - Status code management
+    - Header manipulation
+    - Standardized API responses
+    - File serving
+    - Redirects
     """
 
-    def __init__(self, handler: BaseHTTPRequestHandler) -> None:
+    def __init__(self, handler: HttpHandler) -> None:
         """
-        Initialize a Response object with the provided HTTP handler.
+        Initialize response builder with HTTP handler.
 
-        Args:
-            handler (BaseHTTPRequestHandler): The HTTP request handler that will
-                                             be used to send the response.
+        Parameters:
+            handler: HTTP handler for sending the response
         """
-        self.handler = handler
-        self.status: int = 200  # Default to 200 OK status
-        self.headers: HeadersDict = {}  # Initialize headers as empty dictionary
-        self.body: bytes = b""  # Initialize empty response body as bytes
+        self.handler: HttpHandler = handler
+        self.status: int = 200  # Default success status
+        self.headers: HeadersDict = {}  # Empty headers collection
+        self.body: bytes = b""  # Empty response body
 
     def send(self) -> None:
         """
-        Send the complete HTTP response to the client.
+        Transmit the complete response to the client.
 
-        This method sends the status code, all headers, and the response body
-        to the client in the proper HTTP format.
+        Finalizes the response by sending status code, headers, and body
+        to the client in proper HTTP format. This method should be called
+        after all response configuration is complete.
         """
-        # Send the status code to the client
+        # Send status line
         self.handler.send_response(self.status)
 
         # Send all custom headers
-        for key, value in self.headers.items():
-            self.handler.send_header(str(key), str(value))
+        for name, value in self.headers.items():
+            self.handler.send_header(str(name), str(value))
 
-        # Always include Content-Length header based on body size
+        # Ensure Content-Length is always present
         self.handler.send_header("Content-Length", str(len(self.body)))
 
-        # Signal end of headers section
+        # Mark end of headers section
         self.handler.end_headers()
 
-        # Write the response body to the output stream
+        # Transmit response body
         self.handler.wfile.write(self.body)
 
-    def json(self, data: JsonData) -> "Response":
+    def json(self, data: JsonData) -> 'Response':
         """
-        Set the response body to JSON data and set appropriate headers.
+        Configure response with JSON content.
 
-        This method serializes the provided data to JSON, sets the Content-Type
-        header appropriately, and returns self for method chaining.
+        Serializes data to JSON format and sets appropriate Content-Type
+        header for JSON responses.
 
-        Args:
-            data (Dict[str, Any]): The data to serialize as JSON in the response.
+        Parameters:
+            data: Dictionary to serialize as JSON
 
         Returns:
-            Response: Self, for method chaining.
+            Self for method chaining
         """
-        # Set JSON content type header
+        # Set JSON media type
         self.headers["Content-Type"] = "application/json"
 
-        # Convert data to JSON string and encode as UTF-8 bytes
+        # Serialize and encode data
         self.body = json.dumps(data).encode("utf-8")
 
-        # Return self for method chaining (e.g., response.json(data).send())
+        # Enable method chaining
         return self
 
-    def api(self, data: Optional[JsonData] = None) -> "Response":
+    def api(self, data: Optional[JsonData] = None) -> 'Response':
         """
-        Create a standardized API response based on the HTTP method.
+        Generate standardized API response based on HTTP method.
 
-        This method generates consistent API responses with appropriate
-        status codes and messages based on the request's HTTP method.
+        Creates consistent API responses with appropriate status codes
+        and messages tailored to the request's HTTP method:
 
-        The response structure varies by method:
-        - GET: Returns the data directly or an empty object
-        - POST: Returns "Resource created" message with 201 status and optional data
-        - PUT: Returns "Resource updated" message with 200 status and optional data
-        - DELETE: Returns "Resource deleted" message with 204 status
-        - Others: Returns "Method not allowed" error with 405 status
+        - GET: Returns data directly (200)
+        - POST: Returns creation confirmation with data (201)
+        - PUT: Returns update confirmation with data (200)
+        - DELETE: Returns deletion confirmation (204)
+        - Other methods: Returns method not allowed error (405)
 
-        Args:
-            data (Optional[Dict[str, Any]]): The data to include in the response (optional).
+        Parameters:
+            data: Optional payload to include in response
 
         Returns:
-            Response: Self, for method chaining.
+            Self for method chaining
         """
-        method = cast(str, self.handler.command)  # Get the HTTP method
+        method: str = cast(str, self.handler.command)
 
-        # Define response content and status code based on HTTP method
-        context = {
+        # Method-specific response handlers
+        responses: Dict[str, Callable[[], tuple[JsonData, int]]] = {
             "GET": lambda: (data if data is not None else {}, 200),
             "POST": lambda: (
                 (
@@ -240,50 +245,54 @@ class Response:
             "DELETE": lambda: ({"message": "Resource deleted"}, 204),
         }
 
-        # Get the appropriate response handler based on method, or use default for unsupported methods
-        handler = context.get(method, lambda: ({"error": "Method not allowed"}, 405))
+        # Select appropriate handler or default to method not allowed
+        handler: Callable[[], tuple[JsonData, int]] = responses.get(
+            method, lambda: ({"error": "Method not allowed"}, 405)
+        )
 
-        # Call the handler to get response data and status
-        data, status = handler()
+        # Generate response data and status
+        payload, statuscode = handler()
 
-        # Set the determined status code
-        self.status = status
-
-        # Set content type to JSON
+        # Configure response
+        self.status = statuscode
         self.headers["Content-Type"] = "application/json"
+        self.body = json.dumps(payload).encode("utf-8")
 
-        # Encode response data to JSON format in bytes
-        self.body = json.dumps(data).encode("utf-8")
-
-        # Return self for method chaining
         return self
 
-    def serve(self, filepath: str, mime: Optional[str] = None) -> "Response":
+    def serve(self, filepath: str, mimetype: Optional[str] = None) -> 'Response':
         """
-        Serve a static file to the client.
+        Serve static file as response.
 
-        Args:
-            filepath (str): The path to the file to serve.
-            mime (Optional[str]): The MIME type of the file (optional).
+        Reads file content and determines appropriate MIME type
+        for Content-Type header, either from provided argument
+        or by guessing based on file extension.
+
+        Parameters:
+            filepath: Path to file that should be served
+            mimetype: Optional explicit MIME type to use
 
         Returns:
-            Response: Self, for method chaining.
+            Self for method chaining
+
+        Warning:
+            Logs warning if file not found but returns unchanged response
         """
         try:
-            with open(filepath, "rb") as file:
-                self.body = file.read()
+            location: Path = Path(filepath)
+            with open(location, "rb") as filehandle:
+                self.body = filehandle.read()
 
-            # Set Content-Type header if MIME type is provided
-            if mime:
-                self.headers["Content-Type"] = mime
+            # Set content type either from argument or by guessing
+            if mimetype:
+                self.headers["Content-Type"] = mimetype
             else:
-                # Guess MIME type based on file extension
-                import mimetypes
-                mime, _ = mimetypes.guess_type(filepath)
-                if mime:
-                    self.headers["Content-Type"] = mime
+                # Auto-detect MIME type
+                detected, _ = mimetypes.guess_type(location)
+                if detected:
+                    self.headers["Content-Type"] = detected
 
-            # Set Content-Length header
+            # Set content length
             self.headers["Content-Length"] = str(len(self.body))
 
         except FileNotFoundError:
@@ -291,34 +300,102 @@ class Response:
 
         return self
 
-    def redirect(self, url: str, status: int = 302) -> "Response":
+    def redirect(self, destination: str, statuscode: int = 302) -> 'Response':
         """
-        Set up a redirect response to a different URL.
+        Configure response as HTTP redirect.
 
-        This method configures the response with appropriate status code and
-        Location header to redirect the client to the specified URL.
+        Sets up appropriate status code and Location header
+        to redirect client to specified URL.
 
-        Args:
-            url (str): The URL to redirect to.
-            status (int): The HTTP status code for the redirect (defaults to 302 Found).
-                         Common redirect status codes:
-                         - 301: Moved Permanently
-                         - 302: Found (temporary redirect)
-                         - 303: See Other
-                         - 307: Temporary Redirect
-                         - 308: Permanent Redirect
+        Parameters:
+            destination: Target URL for redirect
+            statuscode: HTTP status code to use (default: 302 Found)
+                        Common options:
+                        - 301: Moved Permanently
+                        - 302: Found (temporary)
+                        - 303: See Other
+                        - 307: Temporary Redirect
+                        - 308: Permanent Redirect
 
         Returns:
-            Response: Self, for method chaining.
+            Self for method chaining
         """
-        # Set the redirect status code
-        self.status = status
+        # Set redirect status
+        self.status = statuscode
 
-        # Set the Location header with the target URL
-        self.headers["Location"] = url
+        # Set target location
+        self.headers["Location"] = destination
 
-        # Set an empty body for the redirect response
+        # Empty body for redirect
         self.body = b""
 
-        # Return self for method chaining
+        return self
+
+    def text(self, content: str) -> 'Response':
+        """
+        Configure response with plain text content.
+
+        Sets Content-Type header for text and encodes content
+        as UTF-8 bytes.
+
+        Parameters:
+            content: Text string to include in response
+
+        Returns:
+            Self for method chaining
+        """
+        # Set plain text media type
+        self.headers["Content-Type"] = "text/plain; charset=utf-8"
+
+        # Encode content
+        self.body = content.encode("utf-8")
+
+        return self
+
+    def html(self, content: str) -> 'Response':
+        """
+        Configure response with HTML content.
+
+        Sets Content-Type header for HTML and encodes content
+        as UTF-8 bytes.
+
+        Parameters:
+            content: HTML string to include in response
+
+        Returns:
+            Self for method chaining
+        """
+        # Set HTML media type
+        self.headers["Content-Type"] = "text/html; charset=utf-8"
+
+        # Encode content
+        self.body = content.encode("utf-8")
+
+        return self
+
+    def status(self, code: int) -> 'Response':
+        """
+        Set HTTP status code for response.
+
+        Parameters:
+            code: HTTP status code (e.g., 200, 404, 500)
+
+        Returns:
+            Self for method chaining
+        """
+        self.status = code
+        return self
+
+    def header(self, name: str, value: str) -> 'Response':
+        """
+        Add or replace HTTP header in response.
+
+        Parameters:
+            name: Header name
+            value: Header value
+
+        Returns:
+            Self for method chaining
+        """
+        self.headers[name] = value
         return self

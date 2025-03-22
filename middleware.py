@@ -1,104 +1,128 @@
-from typing import Callable, List, Any, TypeVar, Dict
+from typing import Callable, List, Any, TypeVar, Optional, cast
 from broadcast import Request, Response
-from webpy import WebPy
 
 # Type variables for better function typing
-T = TypeVar("T", bound=Callable[..., Any])
-MiddlewareHandler = Callable[[Request, Response], Any]
+Handler = TypeVar("Handler", bound=Callable[..., Any])
+Processor = Callable[[Request, Response], Optional[bool]]
 
 
 class Middleware:
     """
-    Middleware class to manage request/response processing handlers.
+    Middleware management system for WebPy applications.
 
-    This class provides functionality to register, execute, and manage middleware functions
-    that can process requests and responses before they reach the route handlers.
-    Middleware can be applied globally or selectively to specific routes, with options
-    to group, skip, pause, resume or reset the execution chain as needed.
+    Provides a way to register functions that run before and after
+    route handlers, allowing for request/response modification,
+    logging, authentication, and other cross-cutting concerns.
     """
 
-    def __init__(self, app: WebPy) -> None:
+    def __init__(self, app: Any) -> None:
         """
-        Initialize the Middleware with the given application.
+        Initialize the middleware system.
 
-        Sets up the middleware container and associates it with a WebPy application
-        instance for integration with the routing system.
+        Creates separate containers for preprocessing and postprocessing
+        middleware functions and associates them with a WebPy application.
 
         Args:
-            app (WebPy): The WebPy application instance to attach middleware to.
+            app: The WebPy application instance to attach middleware to.
         """
-        self.app = app  # Store reference to the main app
-        self.handlers: List[MiddlewareHandler] = []  # List of middleware handlers
-        self.groups: Dict[str, List[MiddlewareHandler]] = {}  # Named groups of middleware
+        self.app = app  # Reference to the main application
+        self.guards: List[Processor] = []  # Preprocessing middleware (before)
+        self.filters: List[Processor] = []  # Postprocessing middleware (after)
 
-    def enroll(self, handler: MiddlewareHandler) -> MiddlewareHandler:
+    def before(self, handler: Processor) -> Processor:
         """
-        Enroll a middleware handler to be executed on requests.
+        Register a middleware function to execute before route handlers.
 
-        This method adds the middleware handler to the execution pipeline
-        that processes each request before it reaches the route handler.
+        These functions can inspect and modify the incoming request,
+        or halt the request processing pipeline if needed.
 
         Args:
-            handler (MiddlewareHandler): The middleware function that accepts
-                                        request and response objects.
+            handler: Function that processes request and response objects
+                    before the route handler executes.
 
         Returns:
-            MiddlewareHandler: The registered middleware handler, unchanged.
+            The registered middleware function, unchanged.
         """
-        self.handlers.append(handler)  # Add handler to the middleware pipeline
-        return handler
+        self.guards.append(handler)
+        return cast(Processor, handler)
 
-    def exclude(self, handler: T) -> T:
+    def after(self, handler: Processor) -> Processor:
         """
-        Decorator to exclude middleware from being executed for the decorated route.
+        Register a middleware function to execute after route handlers.
 
-        This can be used to skip middleware processing for specific routes
-        that don't require it.
+        These functions can inspect and modify the outgoing response,
+        such as adding headers or transforming the response body.
 
         Args:
-            handler (T): The route handler function.
+            handler: Function that processes request and response objects
+                    after the route handler executes but before the
+                    response is sent to the client.
 
         Returns:
-            T: The original handler function, unchanged.
+            The registered middleware function, unchanged.
         """
-        # Simply return the original handler without applying middleware
-        return handler
+        self.filters.append(handler)
+        return cast(Processor, handler)
 
-    def reset(self) -> None:
+    def process(self, request: Request, response: Response) -> bool:
         """
-        Reset the middleware stack, clearing all registered handlers.
+        Execute all registered preprocessing middleware in sequence.
 
-        This method removes all middleware handlers from the execution pipeline,
-        effectively resetting the middleware configuration to its initial state.
-        Useful for testing or when reconfiguring the application pipeline.
-        """
-        self.handlers.clear()  # Clear all registered handlers
-        self.groups.clear()  # Clear middleware groups
-
-    def group(self, name: str, *handlers: MiddlewareHandler) -> None:
-        """
-        Create a named group of middleware handlers for selective application.
-
-        Groups allow organizing middleware functions into logical units that
-        can be applied or removed together, providing better organization and
-        control over the middleware execution flow.
+        Runs before the route handler and can modify the incoming request
+        or prevent further processing.
 
         Args:
-            name (str): The name of the middleware group.
-            *handlers: One or more middleware handler functions to add to the group.
-        """
-        self.groups[name] = list(handlers)  # Store handlers in a named group
+            request: The HTTP request object
+            response: The HTTP response object
 
-    def apply(self, name: str) -> None:
+        Returns:
+            Boolean indicating whether all middleware completed successfully.
+            True means continue to the route handler, False means stop processing.
         """
-        Apply a named middleware group to the handler stack.
+        for guard in self.guards:
+            # If any middleware returns False explicitly, halt execution
+            result = guard(request, response)
+            if result is False:
+                return False
 
-        This adds all middleware handlers from the specified group to the
-        active middleware pipeline, enabling modular middleware management.
+        # All preprocessing middleware executed successfully
+        return True
+
+    def filter(self, request: Request, response: Response) -> bool:
+        """
+        Execute all registered postprocessing middleware in sequence.
+
+        Runs after the route handler and can modify the outgoing response
+        before it's sent to the client.
 
         Args:
-            name (str): The name of the middleware group to apply.)
+            request: The HTTP request object
+            response: The HTTP response object
+
+        Returns:
+            Boolean indicating whether all middleware completed successfully.
+            False means a middleware halted further processing.
         """
-        # Add all handlers from the named group to the active pipeline
-        if name in self.groups:
-            self.handlers.extend(self.groups[name])
+        for filter in self.filters:
+            # If any middleware returns False explicitly, halt further processing
+            result = filter(request, response)
+            if result is False:
+                return False
+
+        # All postprocessing middleware executed successfully
+        return True
+
+    def use(self, handler: Processor) -> Processor:
+        """
+        Legacy method to register preprocessing middleware.
+
+        Maintained for backward compatibility with existing code.
+        Equivalent to calling before().
+
+        Args:
+            handler: Function that processes request and response objects
+
+        Returns:
+            The registered middleware function, unchanged.
+        """
+        return self.before(handler)

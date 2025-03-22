@@ -4,34 +4,39 @@ from typing import Callable, Dict, List, Optional, Any, Type, Tuple, TypeVar, ca
 from jinja2 import Environment, FileSystemLoader
 from router import Router
 from broadcast import Request, Response
-from blueprint import Blueprint
 import ssl
 import warnings
 
-# Type definitions for better clarity
-HandlerFunction = Callable[[Request, Response, Any], None]
-ErrorHandlerFunction = Callable[[Optional[Request], Response], None]
-RouteMatchResult = Tuple[HandlerFunction, Dict[str, Any]]
-T = TypeVar("T", bound=Callable)
+# Enhanced type definitions for improved type safety and clarity
+HandlerType = TypeVar("HandlerType", bound=Callable[[Request, Response, Any], None])
+ErrorHandlerType = TypeVar("ErrorHandlerType", bound=Callable[[Optional[Request], Response], None])
+RouteResult = Tuple[HandlerType, Dict[str, Any]]
+GenericFunction = TypeVar("GenericFunction", bound=Callable)
 
 
 class WebPyCore(BaseHTTPRequestHandler):
     """
-    Core HTTP request handler with integrated routing, template rendering,
-    static file serving, and customizable error handling for web applications.
+    Comprehensive HTTP server framework with integrated routing, templating,
+    and error handling capabilities.
 
-    This class extends BaseHTTPRequestHandler to provide a complete framework
-    for building web applications with clean separation of concerns.
+    Provides a unified approach to web application development through:
+    - Declarative routing with path parameters
+    - Template-based rendering via Jinja2
+    - Static file serving with MIME type detection
+    - Custom error handling with fallbacks
+    - Support for both HTTP and HTTPS connections
+
+    This class serves as both the request handler and the application framework,
+    allowing for a cohesive development experience with minimal boilerplate.
     """
 
-    # Jinja2 environment for rendering HTML templates from the "templates" directory
+    # Templating engine configuration with filesystem-based template loading
     template = Environment(loader=FileSystemLoader(Path("templates")))
 
-    # Directory containing static files (e.g., CSS, JS, images)
+    # Static file directory for serving assets like CSS, JavaScript and images
     static = Path("static")
 
-    # MIME types for commonly served files, mapped by file extensions
-    # Used to set appropriate Content-Type headers when serving static files
+    # Comprehensive MIME type mapping for content-type detection
     mimes: Dict[str, str] = {
         ".html": "text/html",
         ".css": "text/css",
@@ -55,262 +60,240 @@ class WebPyCore(BaseHTTPRequestHandler):
         ".ttf": "font/ttf",
     }
 
-    # Stores custom error handlers for specific HTTP status codes
-    # Keys are HTTP status codes, values are handler functions
-    errors: Dict[int, ErrorHandlerFunction] = {}
+    # Registry for custom error handlers mapped by status code
+    errors: Dict[int, ErrorHandlerType] = {}
 
     def do_GET(self) -> None:
-        """Handle HTTP GET requests by calling the generic serve method."""
-        self.serve("GET")
+        """Process GET requests by delegating to the central request handler."""
+        self.process("GET")
 
     def do_POST(self) -> None:
-        """Handle HTTP POST requests by calling the generic serve method."""
-        self.serve("POST")
+        """Process POST requests by delegating to the central request handler."""
+        self.process("POST")
 
     def do_PUT(self) -> None:
-        """Handle HTTP PUT requests by calling the generic serve method."""
-        self.serve("PUT")
+        """Process PUT requests by delegating to the central request handler."""
+        self.process("PUT")
 
     def do_DELETE(self) -> None:
-        """Handle HTTP DELETE requests by calling the generic serve method."""
-        self.serve("DELETE")
+        """Process DELETE requests by delegating to the central request handler."""
+        self.process("DELETE")
 
     @classmethod
-    def route(cls, path: str, methods: Optional[List[str]] = None) -> Callable[[T], T]:
+    def route(cls, pattern: str, methods: Optional[List[str]] = None) -> Callable[[GenericFunction], GenericFunction]:
         """
-        Decorator for registering HTTP routes with specific paths and methods.
+        Register route handlers for specific URL patterns and HTTP methods.
 
-        Creates a mapping between URL paths and handler functions, allowing
-        automatic request routing based on the requested path and HTTP method.
+        Creates declarative routing through Python decorators, allowing
+        for intuitive mapping between URL paths and handler functions.
 
-        Args:
-            path (str): URL path pattern to register for the route (can include parameters).
-            methods (Optional[List[str]]): Allowed HTTP methods for this route (e.g., ["GET", "POST"]).
-                                          Defaults to ["GET"] if not specified.
+        Parameters:
+            pattern: URL pattern to match, supporting path parameters with syntax:
+                    - Simple parameter: '<name>'
+                    - Typed parameter: '<type:name>' (e.g., '<int:id>')
+            methods: List of HTTP methods this route should handle (defaults to ["GET"])
 
         Returns:
-            Callable: Decorator function that registers the handler with the Router.
-
-        Example:
-            @WebPyCore.route("/users/:id", methods=["GET"])
-            def get_user(request, response, id):
-                # Handle user retrieval by ID
+            Decorator function that registers the handler with the routing system
         """
         if methods is None:
             methods = ["GET"]
 
-        def decorator(handler: T) -> T:
-            # Register the handler with the Router for the specified path and methods
-            Router.route(path, methods)(handler)
+        def decoration(handler: GenericFunction) -> GenericFunction:
+            # Register handler with the Router using the specified pattern and methods
+            Router.route(pattern, methods)(handler)
             return handler
 
-        return decorator
+        return decoration
 
     @classmethod
-    def error(cls, code: int) -> Callable[[ErrorHandlerFunction], ErrorHandlerFunction]:
+    def error(cls, status: int) -> Callable[[ErrorHandlerType], ErrorHandlerType]:
         """
-        Decorator for assigning custom error handlers to HTTP status codes.
+        Register custom error handlers for specific HTTP status codes.
 
-        Allows custom handling of specific HTTP error codes, providing better
-        user experience than default error pages.
+        Enables application-specific error pages and responses for better
+        user experience and consistent error handling throughout the application.
 
-        Args:
-            code (int): HTTP status code to handle (e.g., 404, 500).
+        Parameters:
+            status: HTTP status code to handle (e.g., 404, 500)
 
         Returns:
-            Callable: Decorator that registers the error handler function.
-
-        Example:
-            @WebPyCore.error(404)
-            def not_found(request, response):
-                response.status(404).html("<h1>Page not found</h1>")
+            Decorator function that registers the handler for the specified status code
         """
 
-        def decorator(handler: ErrorHandlerFunction) -> ErrorHandlerFunction:
-            # Register the handler for a specific HTTP error code
-            cls.errors[code] = handler
+        def decoration(handler: ErrorHandlerType) -> ErrorHandlerType:
+            # Store the handler in the error registry keyed by status code
+            cls.errors[status] = handler
             return handler
 
-        return decorator
+        return decoration
 
-    def serve(self, method: str) -> None:
+    def process(self, method: str) -> None:
         """
-        Processes incoming HTTP requests, either serving static files
-        or routing requests based on URL and method.
+        Central request processing pipeline for all HTTP methods.
 
-        This is the central dispatch method that handles all incoming requests
-        by finding the appropriate handler or serving static files.
+        Handles the complete request lifecycle:
+        1. Route matching based on request path and method
+        2. Static file serving for assets under /static/
+        3. Invoking the appropriate handler with extracted parameters
+        4. Error handling for various failure scenarios
 
-        Args:
-            method (str): The HTTP method (e.g., GET, POST) of the request.
+        Parameters:
+            method: HTTP method of the current request (GET, POST, etc.)
         """
         try:
-            # Create Request object and match it against registered routes
-            request = Request(self)
-            match = Router.match(request.path, method)
+            # Create request object from raw HTTP request
+            request: Request = Request(self)
 
-            if match:
-                # Route match found: execute handler function with extracted route parameters
-                handler, params = cast(RouteMatchResult, match)
-                response = Response(self)
-                handler(request, response, **params)
+            # Attempt to match the request against registered routes
+            matching: Optional[RouteResult] = Router.match(request.path, method)
+
+            if matching:
+                # Execute matched handler with extracted path parameters
+                handler, parameters = cast(RouteResult, matching)
+                response: Response = Response(self)
+                handler(request, response, **parameters)
                 response.send()
             elif request.path.startswith("/static/"):
-                # Serve static files if the path is within the "static" directory
-                self.link(request.path)
+                # Handle static file requests with dedicated method
+                self.deliver(request.path)
             else:
-                # Return a 404 if no route or static file match is found
+                # No route matched and not a static file - return 404
                 self.warn(404, "Not Found")
-        except Exception as error:
-            # Handle internal errors (500) for all uncaught exceptions
-            self.warn(500, f"Internal Server Error: {str(error)}")
+        except Exception as exception:
+            # Catch and handle any unhandled exceptions as 500 errors
+            self.warn(500, f"Internal Server Error: {str(exception)}")
 
-    def link(self, path: str) -> None:
+    def deliver(self, filepath: str) -> None:
         """
-        Serve static files (e.g., CSS, JS, images) with appropriate MIME types.
+        Serve static files with appropriate MIME type detection.
 
-        Handles delivery of files from the static directory with proper content types
-        based on file extensions.
+        Handles delivery of files from the static directory with proper content
+        types determined by file extension, supporting a wide range of asset types.
 
-        Args:
-            path (str): URL path to the static file (starting with "/static/").
+        Parameters:
+            filepath: Request path to the static file (starting with "/static/")
         """
         try:
-            # Remove the "/static/" prefix to get the relative path
-            filepath = Path(self.static, path[len("/static/") :])
-            with open(filepath, "rb") as file:
-                # Send response with file content and correct MIME type
+            # Extract relative path by removing the "/static/" prefix
+            resource: Path = Path(self.static, filepath[len("/static/"):])
+
+            # Read file content as binary data
+            with open(resource, "rb") as filedata:
+                # Send successful response with appropriate MIME type
                 self.send_response(200)
                 self.send_header(
                     "Content-type",
-                    self.mimes.get(filepath.suffix.lower(), "application/octet-stream"),
+                    self.mimes.get(resource.suffix.lower(), "application/octet-stream"),
                 )
                 self.end_headers()
-                self.wfile.write(file.read())
+                self.wfile.write(filedata.read())
         except FileNotFoundError:
+            # File doesn't exist in static directory
             self.warn(404, "File Not Found")
-        except Exception as error:
-            warnings.warn(f"Error serving static file {path}: {error}")
+        except Exception as exception:
+            # Handle other file access errors (permissions, etc.)
+            warnings.warn(f"Error serving static file {filepath}: {exception}")
             self.warn(500, "Internal Server Error")
 
     @staticmethod
-    def render(filename: str, **kwargs: Any) -> str:
+    def render(template_name: str, **context: Any) -> str:
         """
-        Renders an HTML template with given context data using Jinja2.
+        Render HTML templates with Jinja2 templating engine.
 
-        Provides templating capabilities for generating dynamic HTML content.
+        Provides powerful templating capabilities for generating dynamic HTML
+        content with context variables, template inheritance, and more.
 
-        Args:
-            filename (str): Filename of the template to render (must be in the templates directory).
-            **kwargs: Key-value pairs representing variables for the template context.
+        Parameters:
+            template_name: Name of the template file to render
+            **context: Template variables to inject into the rendering context
 
         Returns:
-            str: Rendered HTML content as a string.
+            Rendered HTML content as a string
 
         Example:
-            html_content = WebPyCore.render("user_profile.html", user=user_data)
+            response.html(WebPyCore.render('user_profile.html', user=user, editable=True))
         """
-        # Load and render the specified template with provided context
-        template = WebPyCore.template.get_template(filename)
-        return template.render(**kwargs)
-
-    def blueprint(self, blueprint: Blueprint) -> None:
-        """
-        Register a blueprint with the application.
-
-        This method adds all routes defined in the blueprint to the application,
-        respecting the blueprint's prefix.
-
-        Args:
-            blueprint (Blueprint): The blueprint instance to register.
-
-        Example:
-            # Create a blueprint
-            user_bp = Blueprint('user', prefix='/user')
-
-            # Define routes on the blueprint
-            @user_bp.route('/profile')
-            def profile(request, response):
-                pass
-
-            # Register the blueprint with the application
-            app.blueprint(user_bp)
-        """
-        # Call the blueprint's register method to register all routes
-        pass
+        # Load the template by name and render with provided context
+        template = WebPyCore.template.get_template(template_name)
+        return template.render(**context)
 
     @classmethod
     def run(
-        cls,
-        ip: str = "127.0.0.1",
-        port: int = 8080,
-        server: Type[ThreadingHTTPServer] = ThreadingHTTPServer,
-        handler: Optional[Type[BaseHTTPRequestHandler]] = None,
-        certfile: Optional[str] = None,
-        keyfile: Optional[str] = None,
+            cls,
+            ip: str = "127.0.0.1",
+            port: int = 8080,
+            server: Type[ThreadingHTTPServer] = ThreadingHTTPServer,
+            handler: Optional[Type[BaseHTTPRequestHandler]] = None,
+            certfile: Optional[str] = None,
+            keyfile: Optional[str] = None,
     ) -> None:
         """
-        Start the web server, with optional HTTPS if both certfile and keyfile are provided.
+        Start the web application server with optional HTTPS support.
 
-        This is the main entry point for running the web application server.
+        Provides a convenient entry point for launching the web application
+        with support for both HTTP and HTTPS protocols.
 
-        Args:
-            ip (str): IP address to bind (default: 127.0.0.1 for localhost only).
-            port (int): Port for the server to listen on (default: 8080).
-            server (Type[ThreadingHTTPServer]): Server class, defaulting to ThreadingHTTPServer.
-            handler (Optional[Type[BaseHTTPRequestHandler]]): Handler class for HTTP requests.
-            certfile (Optional[str]): Path to the SSL certificate file for HTTPS.
-            keyfile (Optional[str]): Path to the SSL key file for HTTPS.
+        Parameters:
+            ip: IP address to bind the server to (default: localhost)
+            port: TCP port to listen on (default: 8080)
+            server: Server implementation class (default: ThreadingHTTPServer)
+            handler: HTTP request handler class (default: this class)
+            certfile: SSL certificate file path for HTTPS (optional)
+            keyfile: SSL private key file path for HTTPS (optional)
 
         Raises:
-            OSError: If the server cannot be started (e.g., port already in use).
+            OSError: If the server cannot bind to the specified ip and port
+
+        Note:
+            Both certfile and keyfile must be provided to enable HTTPS.
         """
         if handler is None:
             handler = cls
 
-        # Initialize server with the specified handler
-        host = server((ip, port), handler)
+        # Initialize server with the handler class and ip
+        server = server((ip, port), handler)
 
-        # Warn and exit if only one of certfile or keyfile is provided
-        if (certfile and not keyfile) or (keyfile and not certfile):
+        # Validate SSL configuration (both cert and key are required)
+        if bool(certfile) != bool(keyfile):
             warnings.warn(
                 "Both certfile and keyfile are required for HTTPS to work.", UserWarning
             )
             return
 
-        # Setup SSL context if both certfile and keyfile are provided
+        # Configure HTTPS if SSL files are provided
         if certfile and keyfile:
             context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             context.load_cert_chain(certfile=certfile, keyfile=keyfile)
-            host.socket = context.wrap_socket(host.socket, server_side=True)
+            server.socket = context.wrap_socket(server.socket, server_side=True)
             print(f"Starting HTTPS server on {ip}:{port}")
         else:
             print(f"Starting HTTP server on {ip}:{port}")
 
         try:
-            # Start the server and keep it running until interrupted
-            host.serve_forever()
-        except OSError as error:
-            warnings.warn(f"Error starting server: {error}")
+            # Run the server until interrupted
+            server.serve_forever()
+        except OSError as exception:
+            warnings.warn(f"Error starting server: {exception}")
             raise
 
-    def warn(self, code: int, message: str) -> None:
+    def warn(self, status: int, message: str) -> None:
         """
-        Handle error responses, leveraging custom error handlers if available.
+        Process HTTP errors with custom handlers when available.
 
-        Provides consistent error handling throughout the application, with
-        support for custom error pages when registered.
+        Provides consistent error handling throughout the application,
+        with support for customized error pages through registered handlers.
 
-        Args:
-            code (int): HTTP status code (e.g., 404 for Not Found, 500 for Server Error).
-            message (str): Error message to display in the response.
+        Parameters:
+            status: HTTP status code for the error response
+            message: Human-readable error message
         """
-        if code in self.errors:
+        if status in self.errors:
             # Use registered custom error handler if available
             response = Response(self)
-            handler = self.errors[code]
-            handler(None, response)  # Pass None for request in error cases
+            handler = self.errors[status]
+            handler(None, response)  # No request object in error context
             response.send()
         else:
-            # Default error response if no custom handler exists
-            self.send_error(code, message)
+            # Fall back to default error handling
+            self.send_error(status, message)

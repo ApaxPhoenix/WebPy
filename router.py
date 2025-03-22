@@ -28,7 +28,7 @@ class Router:
     dynamic path segments (e.g., "/users/<id:int>", "/posts/<slug:str>").
 
     Attributes:
-        routes (Dict[str, RouteEntry]): A dictionary mapping path patterns to their handlers,
+        routes: A dictionary mapping path patterns to their handlers,
             allowed HTTP methods, and compiled regex patterns.
     """
 
@@ -46,18 +46,12 @@ class Router:
         For example: "/users/<id:int>" or "/posts/<slug:str>"
 
         Args:
-            path (str): The route path pattern, which may include dynamic segments.
-            methods (Optional[List[str]]): The list of allowed HTTP methods for this route.
-                                          Defaults to ["GET"] if not specified.
+            path: The route path pattern, which may include dynamic segments.
+            methods: The list of allowed HTTP methods for this route.
+                   Defaults to ["GET"] if not specified.
 
         Returns:
-            Callable[[T], T]: A decorator function that registers the handler for the route.
-
-        Example:
-            @Router.route("/users/<id:int>", methods=["GET", "PUT"])
-            def handle_user(request, response, id):
-                # id will be extracted from the URL path
-                pass
+            A decorator function that registers the handler for the route.
         """
         if methods is None:
             methods = ["GET"]  # Default to GET if no methods are provided
@@ -74,10 +68,10 @@ class Router:
             Inner decorator function that registers the route in the router's routes dictionary.
 
             Args:
-                handler (T): The function that handles requests to this route.
+                handler: The function that handles requests to this route.
 
             Returns:
-                T: The original handler function, unchanged.
+                The original handler function, unchanged.
             """
             # Store the route details: handler, allowed methods, and compiled regex pattern
             cls.routes[path] = {
@@ -98,15 +92,14 @@ class Router:
         both the URL path pattern and the HTTP method.
 
         Args:
-            path (str): The request URL path to match.
-            method (str): The HTTP method of the request (e.g., "GET", "POST").
+            path: The request URL path to match.
+            method: The HTTP method of the request (e.g., "GET", "POST").
 
         Returns:
-            Optional[Tuple[Callable, Dict[str, str]]]:
-                If a match is found, returns a tuple containing:
-                - The route handler function
-                - A dictionary of extracted parameters from the path
-                If no match is found, returns None.
+            If a match is found, returns a tuple containing:
+            - The route handler function
+            - A dictionary of extracted parameters from the path
+            If no match is found, returns None.
         """
         # Iterate over all registered routes to find a matching path and method
         for route in cls.routes.values():
@@ -114,11 +107,11 @@ class Router:
             pattern = cast(Pattern[str], route.get("pattern"))
 
             # Get allowed methods, defaulting to ["GET"] if none specified
-            allowed_methods = cast(List[str], route.get("methods", ["GET"]))
+            methods = cast(List[str], route.get("methods", ["GET"]))
 
             # Check if both the pattern matches the path AND the method is allowed
             match = pattern.match(path) if pattern else None
-            if match and method in allowed_methods:
+            if match and method in methods:
                 # Extract the handler function
                 handler = cast(RouteHandler, route["handler"])
 
@@ -140,11 +133,11 @@ class Router:
         responding with appropriate Allow headers for 405 Method Not Allowed responses.
 
         Args:
-            path (str): The URL path to check for allowed methods.
+            path: The URL path to check for allowed methods.
 
         Returns:
-            List[str]: A list of allowed HTTP method strings for the path.
-                      Returns ["GET"] as default if the path is not registered.
+            A list of allowed HTTP method strings for the path.
+            Returns ["GET"] as default if the path is not registered.
         """
         # Iterate through registered routes to find a matching pattern
         for route in cls.routes.values():

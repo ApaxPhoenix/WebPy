@@ -3,206 +3,211 @@ import threading
 import json
 from typing import Callable, Dict, Any, Optional, List, Tuple, TypeVar, cast
 
-# Type variables for better type hinting
+# Enhanced type variables for improved type safety
 T = TypeVar("T", bound=Callable[..., Any])
-EventHandler = Callable[[Any, socket.socket], None]
+HandlerType = Callable[[Any, socket.socket], None]
 
 
 class WebSocket:
     """
-    A lightweight WebSocket server implementation that provides event-based communication
-    similar to Socket.IO but with a simpler architecture.
+    Lightweight WebSocket server implementation with event-driven architecture.
 
-    This class enables real-time bidirectional communication between server and clients
-    through an event-driven architecture. It handles multiple client connections
-    concurrently using threading, manages connection lifecycle, and provides methods
-    for both receiving and broadcasting messages.
+    Provides real-time bidirectional communication capabilities between server and clients
+    using a simple event-based model similar to Socket.IO but with reduced complexity.
+    The server manages concurrent client connections through threading, handles the complete
+    connection lifecycle, and offers flexible message broadcasting.
 
-    Features:
-    - Event registration through decorators
-    - JSON-based message format for structured communication
-    - Automatic connection management and cleanup
-    - Broadcast capability to all connected clients
+    Key capabilities:
+    - Decorator-based event handler registration
+    - Structured communication using JSON message format
+    - Automatic client connection management
+    - Efficient broadcasting to connected clients
+    - Thread-based concurrency for handling multiple clients
     """
 
     def __init__(self, app: Any):
         """
-        Initialize the WebSocket server with application context.
+        Construct a new WebSocket server instance.
 
-        Args:
-            app (Any): Parent application instance that this WebSocket server
-                      will be associated with. This allows the WebSocket server
-                      to access application resources and configuration.
+        Parameters:
+            app: Parent app context that provides access to
+                         shared resources, configuration, and services
         """
         self.app = app
-        # Store active client connections for broadcasting messages
-        self.connections: List[socket.socket] = []
-        # Map event names to their handler functions
-        self.events: Dict[str, EventHandler] = {}
+        # Active client connection registry
+        self.clients: List[socket.socket] = []
+        # Event handlers mapped by event name
+        self.handlers: Dict[str, HandlerType] = {}
 
-    def on(self, event: str) -> Callable[[T], T]:
+    def on(self, channel: str) -> Callable[[T], T]:
         """
-        Decorator to register handler functions for specific events.
+        Register event handlers through a decorator pattern.
 
-        When a client sends a message with the specified event name, the decorated
-        function will be called with the message data and client socket as arguments.
+        Creates a binding between an event channel name and a handler function.
+        When messages arrive with a matching channel name, the corresponding
+        handler is invoked with the message payload and client socket.
 
-        Args:
-            event (str): The event name to listen for in incoming messages.
+        Parameters:
+            channel: Event identifier that triggers this handler
 
         Returns:
-            Callable[[T], T]: Decorator function that registers the handler.
+            Decorator function that registers the handler
         """
 
-        def decorator(handler: T) -> T:
+        def registration(function: T) -> T:
             """
-            Inner decorator function that registers the handler in the events dictionary.
+            Internal decorator implementation that stores handler references.
 
-            Args:
-                handler (T): Function to be called when the event is received.
+            Parameters:
+                function: Event handler function to register
 
             Returns:
-                T: The original handler function (unchanged).
+                Original handler function (unmodified)
             """
-            # Store the handler function in the events dictionary
-            self.events[event] = cast(EventHandler, handler)
-            return handler
+            # Register the handler function for the specified event
+            self.handlers[channel] = cast(HandlerType, function)
+            return function
 
-        return decorator
+        return registration
 
-    def emit(self, event: str, data: Optional[Dict[str, Any]] = None) -> None:
+    def emit(self, channel: str, payload: Optional[Dict[str, Any]] = None) -> None:
         """
-        Broadcast an event with optional data to all connected clients.
+        Broadcast an event to all connected clients.
 
-        This method serializes the event and data as JSON and sends it to all
-        active client connections. It also handles cleanup of disconnected clients.
+        Serializes the event channel and payload as JSON and distributes
+        it to all active connections. Automatically handles cleanup of
+        disconnected clients during the broadcasting process.
 
-        Args:
-            event (str): Name of the event to emit.
-            data (Optional[Dict[str, Any]]): Data payload to send with the event.
-                                           Defaults to an empty dictionary if None.
+        Parameters:
+            channel: Event identifier recognized by clients
+            payload: Optional data to send with the event (defaults to empty dict)
+
+        Side effects:
+            - Removes disconnected clients from the active clients list
+            - Sends messages to all connected clients
         """
-        # Create JSON message with event name and data
-        message = json.dumps({"event": event, "data": data or {}})
-        message = message.encode("utf-8")
+        # Prepare JSON message with channel and payload
+        packet = json.dumps({"event": channel, "data": payload or {}})
+        packet = packet.encode("utf-8")
 
         # Track disconnected clients for cleanup
-        clients = []
+        disconnected = []
 
-        # Send message to all connected clients
-        for connection in self.connections:
+        # Attempt to send to all clients
+        for socket in self.clients:
             try:
-                connection.sendall(message)
+                socket.sendall(packet)
             except (BrokenPipeError, ConnectionResetError):
-                # Mark failed connections for removal
-                clients.append(connection)
+                # Mark failed connections for cleanup
+                disconnected.append(socket)
 
-        # Remove disconnected clients from the active connections list
-        for client in clients:
-            if client in self.connections:
-                self.connections.remove(client)
+        # Remove disconnected clients from registry
+        for socket in disconnected:
+            if socket in self.clients:
+                self.clients.remove(socket)
 
-    def connect(self, connection: socket.socket, address: Tuple[str, int]) -> None:
+    def handle(self, socket: socket.socket, address: Tuple[str, int]) -> None:
         """
-        Handle a client connection in a dedicated thread.
+        Manage individual client connection lifecycle.
 
-        This method maintains the lifecycle of a single client connection, including:
-        - Receiving and parsing messages
-        - Dispatching events to registered handlers
-        - Handling connection errors and cleanup
+        Runs in a dedicated thread for each client and processes:
+        - Message reception and parsing
+        - Event dispatch to registered handlers
+        - Connection monitoring and error handling
+        - Resource cleanup on disconnection
 
-        Args:
-            connection (socket.socket): Client socket connection object.
-            address (Tuple[str, int]): Client address as (host, port) tuple.
+        Parameters:
+            socket: Client connection socket object
+            address: Client network address as (host, port)
         """
-        # Register this connection in the active connections list
-        self.connections.append(connection)
+        # Register client in active connections
+        self.clients.append(socket)
         print(f"Client connected from {address}")
 
         try:
-            # Message processing loop for this client
+            # Process messages until client disconnects
             while True:
-                # Receive data from client with buffer size of 1024 bytes
-                message = connection.recv(1024).decode("utf-8")
+                # Receive data with buffer size of 1024 bytes
+                data = socket.recv(1024).decode("utf-8")
 
-                # Empty message indicates client disconnection
-                if not message:
+                # Empty data indicates client disconnection
+                if not data:
                     break
 
                 try:
                     # Parse received JSON message
-                    content = json.loads(message)
+                    message = json.loads(data)
 
-                    # Extract event name and data payload
-                    event = content.get("event")
-                    data = content.get("data", {})
+                    # Extract event channel and payload
+                    channel = message.get("event")
+                    payload = message.get("data", {})
 
-                    # Dispatch to registered handler if event exists
-                    if event in self.events:
-                        self.events[event](data, connection)
+                    # Dispatch to registered handler if found
+                    if channel in self.handlers:
+                        self.handlers[channel](payload, socket)
                 except json.JSONDecodeError:
-                    print(f"Received invalid JSON from {address}")
+                    print(f"Invalid JSON received from {address}")
 
         except ConnectionResetError:
-            # Handle case when client disconnects unexpectedly
+            # Handle unexpected client disconnection
             print(f"Connection reset by client {address}")
         except Exception as error:
-            # Catch and log other unexpected errors
-            print(f"Error handling client {address}: {str(error)}")
+            # Log unexpected errors during message processing
+            print(f"Error processing client {address}: {str(error)}")
         finally:
-            # Clean up the connection regardless of how it ended
+            # Ensure proper cleanup regardless of termination cause
             print(f"Client disconnected from {address}")
-            if connection in self.connections:
-                self.connections.remove(connection)
-            connection.close()
+            if socket in self.clients:
+                self.clients.remove(socket)
+            socket.close()
 
     def run(self, host: str = "127.0.0.1", port: int = 8081) -> None:
         """
-        Start the WebSocket server and listen for incoming connections.
+        Launch the WebSocket server and begin accepting connections.
 
-        This method sets up the server socket, binds to the specified address,
-        and enters a loop that accepts new connections. Each new connection is
-        handled in a separate thread.
+        Creates a server socket, binds to the specified network interface,
+        and enters an acceptance loop that creates a new thread for each
+        incoming client connection.
 
-        Args:
-            host (str): IP address to bind the server to.
-                       Defaults to "127.0.0.1" (localhost).
-            port (int): Port number to listen on. Defaults to 8081.
+        Parameters:
+            host: Network interface address to bind to (default: localhost)
+            port: TCP port to listen on (default: 8081)
 
-        Note:
-            This method blocks indefinitely until interrupted (e.g., by Ctrl+C).
-            The server socket will be properly closed on exit.
+        Notes:
+            - This method blocks indefinitely until interrupted
+            - The server automatically handles resource cleanup on exit
+            - Client connections are managed in separate daemon threads
         """
-        # Create TCP/IP socket using IPv4 addressing
+        # Create TCP socket with IPv4 addressing
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        # Allow socket to reuse the address (prevents "Address already in use" errors)
+        # Configure socket for address reuse
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
-        # Bind to specified network interface and port
+        # Bind to specified interface and port
         server.bind((host, port))
 
-        # Start listening with connection backlog of 5
+        # Listen with connection backlog of 5
         server.listen(5)
         print(f"WebSocket server running on ws://{host}:{port}")
 
         try:
-            # Main server loop
+            # Primary connection acceptance loop
             while True:
-                # Accept new client connection (blocks until connection arrives)
-                connection, address = server.accept()
+                # Wait for incoming client connection
+                client, location = server.accept()
 
-                # Create and start thread to handle this client connection
-                thread = threading.Thread(
-                    target=self.connect, args=(connection, address)
+                # Create dedicated thread for this client
+                worker = threading.Thread(
+                    target=self.handle, args=(client, location)
                 )
-                # Set as daemon thread so it terminates when main thread exits
-                thread.daemon = True
-                thread.start()
+                # Set as daemon thread for automatic cleanup
+                worker.daemon = True
+                worker.start()
 
         except KeyboardInterrupt:
-            # Handle server shutdown on Ctrl+C
+            # Handle graceful shutdown on Ctrl+C
             print("Server shutting down...")
         finally:
-            # Ensure server socket is closed properly
+            # Ensure server socket is properly closed
             server.close()
