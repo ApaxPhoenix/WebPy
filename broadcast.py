@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, Optional, Union, List, cast, TypeVar, Callable
+from typing import Any, Dict, Optional, Union, List, cast, TypeVar, Callable, Tuple
 from urllib.parse import parse_qs, urlparse, ParseResult
 from http.server import BaseHTTPRequestHandler
 import warnings
@@ -94,7 +94,7 @@ class Request:
             Dictionary where keys are parameter names and values are either
             single strings or lists of strings for multi-valued parameters
         """
-        return self.parameters
+        return {k: v[0] if len(v) == 1 else v for k, v in self.parameters.items()}
 
     @property
     def ip(self) -> str:
@@ -180,7 +180,7 @@ class Response:
         # Transmit response body
         self.handler.wfile.write(self.body)
 
-    def json(self, data: JsonData) -> 'Response':
+    def json(self, data: JsonData) -> R:
         """
         Configure response with JSON content.
 
@@ -200,9 +200,9 @@ class Response:
         self.body = json.dumps(data).encode("utf-8")
 
         # Enable method chaining
-        return self
+        return cast(R, self)
 
-    def api(self, data: Optional[JsonData] = None) -> 'Response':
+    def api(self, data: Optional[JsonData] = None) -> R:
         """
         Generate standardized API response based on HTTP method.
 
@@ -224,7 +224,7 @@ class Response:
         method: str = cast(str, self.handler.command)
 
         # Method-specific response handlers
-        responses: Dict[str, Callable[[], tuple[JsonData, int]]] = {
+        responses: Dict[str, Callable[[], Tuple[JsonData, int]]] = {
             "GET": lambda: (data if data is not None else {}, 200),
             "POST": lambda: (
                 (
@@ -246,7 +246,7 @@ class Response:
         }
 
         # Select appropriate handler or default to method not allowed
-        handler: Callable[[], tuple[JsonData, int]] = responses.get(
+        handler: Callable[[], Tuple[JsonData, int]] = responses.get(
             method, lambda: ({"error": "Method not allowed"}, 405)
         )
 
@@ -258,9 +258,9 @@ class Response:
         self.headers["Content-Type"] = "application/json"
         self.body = json.dumps(payload).encode("utf-8")
 
-        return self
+        return cast(R, self)
 
-    def serve(self, filepath: str, mimetype: Optional[str] = None) -> 'Response':
+    def serve(self, filepath: str, mimetype: Optional[str] = None) -> R:
         """
         Serve static file as response.
 
@@ -298,9 +298,9 @@ class Response:
         except FileNotFoundError:
             warnings.warn("File not found")
 
-        return self
+        return cast(R, self)
 
-    def redirect(self, destination: str, statuscode: int = 302) -> 'Response':
+    def redirect(self, destination: str, statuscode: int = 302) -> R:
         """
         Configure response as HTTP redirect.
 
@@ -329,9 +329,9 @@ class Response:
         # Empty body for redirect
         self.body = b""
 
-        return self
+        return cast(R, self)
 
-    def text(self, content: str) -> 'Response':
+    def text(self, content: str) -> R:
         """
         Configure response with plain text content.
 
@@ -350,9 +350,9 @@ class Response:
         # Encode content
         self.body = content.encode("utf-8")
 
-        return self
+        return cast(R, self)
 
-    def html(self, content: str) -> 'Response':
+    def html(self, content: str) -> R:
         """
         Configure response with HTML content.
 
@@ -371,9 +371,9 @@ class Response:
         # Encode content
         self.body = content.encode("utf-8")
 
-        return self
+        return cast(R, self)
 
-    def status(self, code: int) -> 'Response':
+    def status(self, code: int) -> R:
         """
         Set HTTP status code for response.
 
@@ -384,9 +384,9 @@ class Response:
             Self for method chaining
         """
         self.status = code
-        return self
+        return cast(R, self)
 
-    def header(self, name: str, value: str) -> 'Response':
+    def header(self, name: str, value: str) -> R:
         """
         Add or replace HTTP header in response.
 
@@ -398,4 +398,4 @@ class Response:
             Self for method chaining
         """
         self.headers[name] = value
-        return self
+        return cast(R, self)

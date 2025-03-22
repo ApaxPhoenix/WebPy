@@ -1,4 +1,4 @@
-from typing import Callable, List, Any, TypeVar, Optional, cast
+from typing import Callable, Dict, Any, TypeVar, Optional, cast, overload
 from broadcast import Request, Response
 
 # Type variables for better function typing
@@ -19,17 +19,25 @@ class Middleware:
         """
         Initialize the middleware system.
 
-        Creates separate containers for preprocessing and postprocessing
-        middleware functions and associates them with a WebPy application.
+        Creates a container for middleware functions and
+        associates them with a WebPy application.
 
         Args:
             app: The WebPy application instance to attach middleware to.
         """
         self.app = app  # Reference to the main application
-        self.guards: List[Processor] = []  # Preprocessing middleware (before)
-        self.filters: List[Processor] = []  # Postprocessing middleware (after)
+        self.map: Dict[str, Dict[str, Processor]] = {
+            "before": {},  # Preprocessing middleware
+            "after": {}    # Postprocessing middleware
+        }
 
-    def before(self, handler: Processor) -> Processor:
+    @overload
+    def before(self, name: str, handler: Processor) -> Processor: ...
+
+    @overload
+    def before(self, name: str) -> Callable[[Processor], Processor]: ...
+
+    def before(self, name: str, handler: Optional[Processor] = None) -> Processor | Callable[[Processor], Processor]:
         """
         Register a middleware function to execute before route handlers.
 
@@ -37,16 +45,31 @@ class Middleware:
         or halt the request processing pipeline if needed.
 
         Args:
+            name: Unique identifier for this middleware function
             handler: Function that processes request and response objects
                     before the route handler executes.
 
         Returns:
             The registered middleware function, unchanged.
         """
-        self.guards.append(handler)
-        return cast(Processor, handler)
+        if handler is not None:
+            # Direct registration
+            self.map["before"][name] = handler
+            return cast(Processor, handler)
+        else:
+            # Decorator registration
+            def decorator(handler: Processor) -> Processor:
+                self.map["before"][name] = handler
+                return handler
+            return decorator
 
-    def after(self, handler: Processor) -> Processor:
+    @overload
+    def after(self, name: str, handler: Processor) -> Processor: ...
+
+    @overload
+    def after(self, name: str) -> Callable[[Processor], Processor]: ...
+
+    def after(self, name: str, handler: Optional[Processor] = None) -> Processor | Callable[[Processor], Processor]:
         """
         Register a middleware function to execute after route handlers.
 
@@ -54,6 +77,7 @@ class Middleware:
         such as adding headers or transforming the response body.
 
         Args:
+            name: Unique identifier for this middleware function
             handler: Function that processes request and response objects
                     after the route handler executes but before the
                     response is sent to the client.
@@ -61,8 +85,16 @@ class Middleware:
         Returns:
             The registered middleware function, unchanged.
         """
-        self.filters.append(handler)
-        return cast(Processor, handler)
+        if handler is not None:
+            # Direct registration
+            self.map["after"][name] = handler
+            return cast(Processor, handler)
+        else:
+            # Decorator registration
+            def decorator(handler: Processor) -> Processor:
+                self.map["after"][name] = handler
+                return handler
+            return decorator
 
     def process(self, request: Request, response: Response) -> bool:
         """
@@ -79,50 +111,11 @@ class Middleware:
             Boolean indicating whether all middleware completed successfully.
             True means continue to the route handler, False means stop processing.
         """
-        for guard in self.guards:
+        for name, handler in self.map["before"].items():
             # If any middleware returns False explicitly, halt execution
-            result = guard(request, response)
+            result = handler(request, response)
             if result is False:
                 return False
 
         # All preprocessing middleware executed successfully
         return True
-
-    def filter(self, request: Request, response: Response) -> bool:
-        """
-        Execute all registered postprocessing middleware in sequence.
-
-        Runs after the route handler and can modify the outgoing response
-        before it's sent to the client.
-
-        Args:
-            request: The HTTP request object
-            response: The HTTP response object
-
-        Returns:
-            Boolean indicating whether all middleware completed successfully.
-            False means a middleware halted further processing.
-        """
-        for filter in self.filters:
-            # If any middleware returns False explicitly, halt further processing
-            result = filter(request, response)
-            if result is False:
-                return False
-
-        # All postprocessing middleware executed successfully
-        return True
-
-    def use(self, handler: Processor) -> Processor:
-        """
-        Legacy method to register preprocessing middleware.
-
-        Maintained for backward compatibility with existing code.
-        Equivalent to calling before().
-
-        Args:
-            handler: Function that processes request and response objects
-
-        Returns:
-            The registered middleware function, unchanged.
-        """
-        return self.before(handler)

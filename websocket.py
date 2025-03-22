@@ -1,7 +1,7 @@
 import socket
 import threading
 import json
-from typing import Callable, Dict, Any, Optional, List, Tuple, TypeVar, cast
+from typing import Callable, Dict, Any, Optional, Tuple, TypeVar, cast
 
 # Enhanced type variables for improved type safety
 T = TypeVar("T", bound=Callable[..., Any])
@@ -34,10 +34,12 @@ class WebSocket:
                          shared resources, configuration, and services
         """
         self.app = app
-        # Active client connection registry
-        self.clients: List[socket.socket] = []
-        # Event handlers mapped by event name
-        self.handlers: Dict[str, HandlerType] = {}
+        # Combined registry for clients and event handlers
+        # Maps client sockets to their metadata (connection info, active state)
+        self.registry: Dict[str, Dict[str, Any]] = {
+            "clients": {},  # Maps socket object IDs to socket objects
+            "handlers": {}  # Maps event names to handler functions
+        }
 
     def on(self, channel: str) -> Callable[[T], T]:
         """
@@ -65,7 +67,7 @@ class WebSocket:
                 Original handler function (unmodified)
             """
             # Register the handler function for the specified event
-            self.handlers[channel] = cast(HandlerType, function)
+            self.registry["handlers"][channel] = cast(HandlerType, function)
             return function
 
         return registration
@@ -83,30 +85,30 @@ class WebSocket:
             payload: Optional data to send with the event (defaults to empty dict)
 
         Side effects:
-            - Removes disconnected clients from the active clients list
+            - Removes disconnected clients from the active clients registry
             - Sends messages to all connected clients
         """
         # Prepare JSON message with channel and payload
         packet = json.dumps({"event": channel, "data": payload or {}})
-        packet = packet.encode("utf-8")
+        encoded_packet = packet.encode("utf-8")
 
         # Track disconnected clients for cleanup
         disconnected = []
 
         # Attempt to send to all clients
-        for socket in self.clients:
+        for client_id, client_socket in self.registry["clients"].items():
             try:
-                socket.sendall(packet)
+                client_socket.sendall(encoded_packet)
             except (BrokenPipeError, ConnectionResetError):
                 # Mark failed connections for cleanup
-                disconnected.append(socket)
+                disconnected.append(client_id)
 
         # Remove disconnected clients from registry
-        for socket in disconnected:
-            if socket in self.clients:
-                self.clients.remove(socket)
+        for client_id in disconnected:
+            if client_id in self.registry["clients"]:
+                del self.registry["clients"][client_id]
 
-    def handle(self, socket: socket.socket, address: Tuple[str, int]) -> None:
+    def handle(self, client_socket: socket.socket, address: Tuple[str, int]) -> None:
         """
         Manage individual client connection lifecycle.
 
@@ -117,18 +119,19 @@ class WebSocket:
         - Resource cleanup on disconnection
 
         Parameters:
-            socket: Client connection socket object
+            client_socket: Client connection socket object
             address: Client network address as (host, port)
         """
-        # Register client in active connections
-        self.clients.append(socket)
+        # Generate unique client ID and register in active connections
+        client_id = f"{address[0]}:{address[1]}_{id(client_socket)}"
+        self.registry["clients"][client_id] = client_socket
         print(f"Client connected from {address}")
 
         try:
             # Process messages until client disconnects
             while True:
                 # Receive data with buffer size of 1024 bytes
-                data = socket.recv(1024).decode("utf-8")
+                data = client_socket.recv(1024).decode("utf-8")
 
                 # Empty data indicates client disconnection
                 if not data:
@@ -143,8 +146,8 @@ class WebSocket:
                     payload = message.get("data", {})
 
                     # Dispatch to registered handler if found
-                    if channel in self.handlers:
-                        self.handlers[channel](payload, socket)
+                    if channel in self.registry["handlers"]:
+                        self.registry["handlers"][channel](payload, client_socket)
                 except json.JSONDecodeError:
                     print(f"Invalid JSON received from {address}")
 
@@ -157,9 +160,9 @@ class WebSocket:
         finally:
             # Ensure proper cleanup regardless of termination cause
             print(f"Client disconnected from {address}")
-            if socket in self.clients:
-                self.clients.remove(socket)
-            socket.close()
+            if client_id in self.registry["clients"]:
+                del self.registry["clients"][client_id]
+            client_socket.close()
 
     def run(self, host: str = "127.0.0.1", port: int = 8081) -> None:
         """

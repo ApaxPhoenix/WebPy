@@ -2,30 +2,12 @@ from typing import Callable, List, Optional, Any, Type, TypeVar, cast
 from core import WebPyCore
 from broadcast import Request, Response
 from middleware import Middleware
-from xss import XSS
-from csp import CSP
-from hsts import HSTS
-from enum import IntFlag, auto
+from blueprint import Blueprint
 
 # Type variables for function typing with proper constraints
 Handler = TypeVar("Handler", bound=Callable[..., Any])
 ErrorHandler = TypeVar("ErrorHandler", bound=Callable[..., Any])
 Processor = TypeVar("Processor", bound=Callable[[Request, Response], Any])
-
-
-class SecurityFlags(IntFlag):
-    """
-    Security feature flags for the WebPy framework.
-
-    Implemented as IntFlag to allow bitwise operations like:
-    FLAGS = SecurityFlags.XSS | SecurityFlags.CSP
-    """
-    NONE = 0
-    XSS = auto()  # Cross-Site Scripting protection
-    CSP = auto()  # Content Security Policy
-    CSRF = auto()  # Cross-Site Request Forgery protection
-    HSTS = auto()  # HTTP Strict Transport Security
-    CORS = auto()  # Cross-Origin Resource Sharing
 
 
 class WebPy:
@@ -37,41 +19,15 @@ class WebPy:
     facade over the lower-level WebPyCore implementation.
     """
 
-    def __init__(self, flags: SecurityFlags = SecurityFlags.NONE) -> None:
+    def __init__(self) -> None:
         """
         Initialize a new web application instance.
 
         Sets up the core HTTP server reference and initializes the
         middleware management system.
-
-        Args:
-            flags: Security features to enable, combined using bitwise operators
         """
         self.app: Type[WebPyCore] = WebPyCore
         self.middleware = Middleware(self)
-        self.flags = flags
-        self.modules = {}
-
-        # Initialize security modules based on flags
-        if SecurityFlags.XSS in self.flags:
-            # Register XSS protection middleware
-            self.modules['xss'] = XSS(self)
-
-        if SecurityFlags.CSP in self.flags:
-            # Register CSP protection
-            self.modules['csp'] = CSP(self)
-
-        if SecurityFlags.CSRF in self.flags:
-            # Initialize CSRF protection
-            pass
-
-        if SecurityFlags.HSTS in self.flags:
-            # Register hsts protection
-            self.modules['hsts'] = HSTS(self)
-
-        if SecurityFlags.CORS in self.flags:
-            # Initialize CORS
-            pass
 
     def route(self, path: str, methods: Optional[List[str]] = None) -> Callable[[Handler], Handler]:
         """
@@ -116,7 +72,8 @@ class WebPy:
                     result = handler(*args, **kwargs)
 
                     # Execute postprocessing middleware chain
-                    self.middleware.filter(request, response)
+                    for name, processor in self.middleware.map["after"].items():
+                        processor(request, response)
 
                     return result
                 return None
@@ -126,38 +83,6 @@ class WebPy:
             return cast(Handler, handler)
 
         return decorator
-
-    def before(self, handler: Processor) -> Processor:
-        """
-        Register a preprocessing middleware function.
-
-        Creates a middleware that runs before route handlers,
-        allowing for request inspection and modification.
-
-        Args:
-            handler: Function that processes the request and response
-                     objects before the route handler executes.
-
-        Returns:
-            The middleware function, unchanged.
-        """
-        return self.middleware.before(handler)
-
-    def after(self, handler: Processor) -> Processor:
-        """
-        Register a postprocessing middleware function.
-
-        Creates a middleware that runs after route handlers,
-        allowing for response modification before it's sent.
-
-        Args:
-            handler: Function that processes the request and response
-                     objects after the route handler executes.
-
-        Returns:
-            The middleware function, unchanged.
-        """
-        return self.middleware.after(handler)
 
     def error(self, code: int) -> Callable[[ErrorHandler], ErrorHandler]:
         """
@@ -207,23 +132,21 @@ class WebPy:
         """
         return self.app.render(template, **context)
 
-    def modules(self, name: str) -> Any:
+    def register(self, blueprint: Blueprint) -> None:
         """
-        Get a reference to an initialized security module.
+        Register a blueprint with the application.
 
-        Allows access to security module methods for additional configuration.
+        Integrates the blueprint's routes, templates, and static assets
+        into the main application.
 
         Args:
-            name: Name of the security module ('xss', 'csp', etc.)
-
-        Returns:
-            The security module instance or None if not found
+            blueprint: The blueprint instance to register
         """
-        return self.modules.get(name)
+        blueprint.register(self.app)
 
     def run(
             self,
-            host: str = "0.0.0.0",
+            ip: str = "0.0.0.0",
             port: int = 8080,
             certfile: Optional[str] = None,
             keyfile: Optional[str] = None,
@@ -235,7 +158,7 @@ class WebPy:
         routes, middleware, and error handlers.
 
         Args:
-            host: IP address to bind the server to. Default is all interfaces.
+            ip: IP address to bind the server to. Default is all interfaces.
             port: Port number to listen on. Default is 8080.
             certfile: Path to SSL certificate file for HTTPS.
                       Required with keyfile for HTTPS support.
@@ -246,4 +169,4 @@ class WebPy:
             Providing both certfile and keyfile enables HTTPS.
             Otherwise, standard HTTP will be used.
         """
-        self.app.run(ip=host, port=port, certfile=certfile, keyfile=keyfile)
+        self.app.run(ip=ip, port=port, certfile=certfile, keyfile=keyfile)

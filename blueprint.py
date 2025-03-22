@@ -89,7 +89,7 @@ class Blueprint:
                 original = response.__class__.render
 
                 # Blueprint-aware template rendering function
-                def render(template, **context):
+                def render(template: str, **context: Any) -> str:
                     """
                     Enhanced template renderer with blueprint-first resolution.
 
