@@ -1,5 +1,5 @@
 from typing import Callable, Dict, Any, TypeVar, Optional, cast, overload
-from broadcast import Request, Response
+from .broadcast import Request, Response
 
 # Type variables for better function typing
 Handler = TypeVar("Handler", bound=Callable[..., Any])

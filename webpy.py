@@ -1,8 +1,8 @@
 from typing import Callable, List, Optional, Any, Type, TypeVar, cast
-from core import WebPyCore
-from broadcast import Request, Response
-from middleware import Middleware
-from blueprint import Blueprint
+from .core import WebPyCore
+from .broadcast import Request, Response
+from .middleware import Middleware
+from .blueprint import Blueprint
 
 # Type variables for function typing with proper constraints
 Handler = TypeVar("Handler", bound=Callable[..., Any])

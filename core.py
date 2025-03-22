@@ -2,8 +2,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Any, Type, Tuple, TypeVar, cast
 from jinja2 import Environment, FileSystemLoader
-from router import Router
-from broadcast import Request, Response
+from .router import Router
+from .broadcast import Request, Response
 import ssl
 import warnings
 

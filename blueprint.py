@@ -1,7 +1,7 @@
 from typing import List, Callable, Dict, Optional, TypeVar, Any, cast
 from pathlib import Path
 from functools import wraps
-from router import Router
+from .router import Router
 from jinja2 import ChoiceLoader, FileSystemLoader
 
 # Enhanced type variables for better type safety
