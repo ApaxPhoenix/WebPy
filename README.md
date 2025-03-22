@@ -1,6 +1,3 @@
-Certainly! Based on the code you provided, I"ll update the markdown documentation to reflect the actual implementation details. Here"s the revised markdown:
-
-```markdown
 # WebPy Documentation
 
 **WebPy** is a lightweight Python framework designed to simplify web development. Whether you"re building a small web application or a complex API, WebPy provides the tools you need to get the job done efficiently. This documentation will guide you through the core features, project structure, and essential functionalities of WebPy.
@@ -608,6 +605,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-```
-
-This updated markdown reflects the actual implementation details from the code you provided. It includes examples for handling requests, dynamic routing, using templates, blueprints, middleware, error handling, and HTTPS support.
