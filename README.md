@@ -1,6 +1,6 @@
 # WebPy Documentation
 
-**WebPy** is a lightweight Python framework designed to simplify web development. Whether you"re building a small web application or a complex API, WebPy provides the tools you need to get the job done efficiently. This documentation will guide you through the core features, project structure, and essential functionalities of WebPy.
+**WebPy** is a lightweight Python framework designed to simplify web development. Whether you're building a small web application or a complex API, WebPy provides the tools you need to get the job done efficiently. This documentation will guide you through the core features, project structure, and essential functionalities of WebPy.
 
 ## Core Features
 
