@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Callable, Dict, Any, TypeVar, Optional, cast, overload
 from .broadcast import Request, Response
 

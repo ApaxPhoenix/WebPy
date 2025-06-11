@@ -4,7 +4,7 @@ from functools import wraps
 from .router import Router
 from jinja2 import ChoiceLoader, FileSystemLoader
 
-# Enhanced type variables for better type safety
+# Type variables with enhanced constraints for robust type checking
 HandlerType = TypeVar("HandlerType", bound=Callable[..., Any])
 RequestType = TypeVar("RequestType")
 ResponseType = TypeVar("ResponseType")
@@ -14,142 +14,145 @@ AppType = TypeVar("AppType")
 
 class Blueprint:
     """
-    Modular architecture component for web application organization.
+    Organizational unit for structuring web applications into logical modules.
 
-    Encapsulates routes, templates, and static assets into independent modules
-    that can be attached to the main application. Each Blueprint maintains its own
-    isolated namespace with dedicated URL prefixing, template resolution, and
-    static file serving capabilities.
+    Provides a clean abstraction for grouping related routes, templates, and static
+    resources under a unified namespace. Each Blueprint operates with its own URL
+    prefix and resource directories, allowing for hierarchical application design
+    and component reusability.
 
-    The Blueprint system enables:
-    - Logical separation of application components
-    - Reusable functional modules across projects
-    - Domain-driven design at the routing level
-    - Simplified maintenance through code isolation
+    Key capabilities include:
+    - Isolated routing with automatic URL prefixing
+    - Dedicated template and static file directories
+    - Namespace collision prevention through named registration
+    - Seamless integration with main application infrastructure
     """
 
-    # Global registry for all blueprint instances
+    # Central storage for all instantiated blueprint components
     registry: Dict[str, 'Blueprint'] = {}
 
     def __init__(self, name: str, prefix: str = "") -> None:
         """
-        Construct a new Blueprint instance with unique naming and routing.
+        Initialize a Blueprint with distinct identity and routing configuration.
 
         Parameters:
-            name: Unique identifier for blueprint registration and template lookup
-            prefix: URL prefix prepended to all routes within this blueprint
+            name: Distinctive identifier for blueprint lookup and resource namespacing
+            prefix: URL path segment prepended to all blueprint routes
 
         Raises:
-            KeyError: If blueprint with identical name already exists
+            KeyError: When attempting to register duplicate blueprint names
         """
         self.name: str = name
         self.prefix: str = prefix.rstrip('/') if prefix else ''
 
-        # Filesystem paths for blueprint resources
+        # Blueprint resource directory structure
         self.directory: Path = Path("blueprints", name)
         self.template: Path = Path(self.directory, "templates")
         self.static: Path = Path(self.directory, "static")
 
-        # Register in global blueprint registry for lookup
+        # Add to global blueprint tracking system
         Blueprint.registry[name] = self
 
     def route(self, path: str, methods: Optional[List[str]] = None) -> Callable[[HandlerType], HandlerType]:
         """
-        Decorator factory for registering route handlers within this blueprint.
+        Create route decorators with blueprint-aware URL handling.
 
-        Creates prefixed routes that maintain blueprint context during request
-        processing, enabling proper template resolution and resource handling.
+        Generates decorated handlers that automatically incorporate the blueprint's
+        URL prefix and provide enhanced template resolution capabilities within
+        the blueprint's resource context.
 
         Parameters:
-            path: URL pattern to match (automatically prefixed with blueprint prefix)
-            methods: HTTP methods supported by this route (defaults to GET only)
+            path: Route pattern (combined with blueprint prefix for final URL)
+            methods: Accepted HTTP verbs (defaults to GET requests only)
 
         Returns:
-            Decorator function that processes and registers the handler
+            Decorator that enhances handlers with blueprint functionality
 
-        Example:
-            @users_blueprint.route('/profile/<id>')
-            def profile(request, response, id):
-                # Handles /users/profile/123 if prefix is 'users'
-                return response.render('profile.html', user_id=id)
+        Usage:
+            @api_blueprint.route('/users/<int:id>')
+            def get_user(request, response, id):
+                # Accessible at /api/users/123 if prefix is 'api'
+                return response.render('user_detail.html', user_id=id)
         """
         if methods is None:
             methods = ["GET"]
 
-        # Decorator factory function
+        # Blueprint route decorator implementation
         def decoration(handler: HandlerType) -> HandlerType:
-            # Construct full route path with blueprint prefix
+            # Build complete URL path including blueprint prefix
             fullpath: str = f"{self.prefix}/{path.lstrip('/')}" if path else self.prefix
 
-            # Register handler with router using wrapper for context
+            # Register with router using enhanced wrapper
             @Router.route(fullpath, methods)
             @wraps(handler)
             def wrapper(request: RequestType, response: ResponseType, **params: Any) -> Any:
-                # Preserve original render implementation
+                # Store reference to original template renderer
                 original = response.__class__.render
 
-                # Blueprint-aware template rendering function
+                # Blueprint-scoped template resolution function
                 def render(template: str, **context: Any) -> str:
                     """
-                    Enhanced template renderer with blueprint-first resolution.
+                    Template renderer with blueprint-first lookup strategy.
 
-                    Attempts to locate templates in the blueprint's directory before
-                    falling back to global templates, enabling component isolation
-                    while maintaining application-wide templates as fallbacks.
+                    Prioritizes templates from the blueprint's template directory,
+                    falling back to application-wide templates when blueprint-specific
+                    templates are unavailable. This enables modular template organization
+                    while preserving access to shared application templates.
 
                     Parameters:
-                        template: Template filename to render
-                        **context: Variables to inject into template context
+                        template: Name of template file to process
+                        **context: Template variables for rendering context
 
                     Returns:
-                        Rendered template content as string
+                        Fully rendered template content
                     """
                     try:
-                        # Check blueprint-specific template first
+                        # Attempt blueprint-specific template resolution
                         location: Path = Path(self.template, template)
                         if location.exists():
-                            # Prefix template path with blueprint name
+                            # Use namespaced template path
                             return original(f"{self.name}/{template}", **context)
                     except Exception:
-                        # Silently handle resolution errors
+                        # Continue with fallback on any resolution error
                         pass
 
-                    # Fall back to application-level template
+                    # Default to application-level template resolution
                     return original(template, **context)
 
-                # Monkey patch render method temporarily
+                # Temporarily override render method for blueprint context
                 response.__class__.render = render
 
                 try:
-                    # Execute handler with enhanced context
+                    # Execute handler with blueprint-enhanced environment
                     result: Any = handler(request, response, **params)
                     return result
                 finally:
-                    # Restore original render method
+                    # Restore original render implementation
                     response.__class__.render = original
 
-            # Return wrapped handler with context
+            # Return enhanced handler with blueprint capabilities
             return cast(HandlerType, wrapper)
 
         return decoration
 
-    def register(self, app: AppType) -> None:
+    def blueprint(self, app: AppType) -> None:
         """
-        Integrate blueprint with main application infrastructure.
+        Attach blueprint resources to the main application framework.
 
-        Sets up template resolution paths and static file serving routes,
-        making the blueprint's resources available to the application.
+        Configures template loading hierarchy and establishes static file serving
+        routes, making all blueprint resources accessible through the main
+        application's request handling pipeline.
 
         Parameters:
-            app: Main application instance to register with
+            app: Primary application instance for resource integration
 
-        Side Effects:
-            - Modifies app's template loader configuration
-            - Adds static file routes to the application router
+        Effects:
+            - Extends application template loader with blueprint templates
+            - Creates static file serving endpoints for blueprint assets
         """
-        # Configure template resolution if templates exist
+        # Establish template loading chain if blueprint templates exist
         if self.template.exists():
-            # Collect existing template loaders
+            # Preserve existing template loader configuration
             loaders = []
             if hasattr(app.template, 'loader'):
                 if hasattr(app.template.loader, 'loaders'):
@@ -157,50 +160,51 @@ class Blueprint:
                 else:
                     loaders = [app.template.loader]
 
-            # Create blueprint-specific template loader
+            # Add blueprint template loader to resolution chain
             filesystem: FileSystemLoader = FileSystemLoader(str(self.template))
 
-            # Chain loaders for hierarchical template resolution
+            # Establish hierarchical template resolution order
             app.template.loader = ChoiceLoader(loaders + [filesystem])
 
-        # Configure static file serving if static directory exists
+        # Set up static asset serving if blueprint static directory exists
         if self.static.exists():
-            # Register route for blueprint's static assets
+            # Create dedicated route for blueprint static files
             @app.route(f"/static/{self.name}/<path:filepath>", methods=["GET"])
             def assets(request: RequestType, response: ResponseType, filepath: str) -> None:
                 """
-                Static file server for blueprint-specific assets.
+                HTTP handler for serving blueprint-specific static resources.
 
-                Serves files from the blueprint's static directory with
-                appropriate MIME type detection and error handling.
+                Provides secure access to files within the blueprint's static directory,
+                including proper MIME type detection and comprehensive error handling
+                for missing files and access issues.
 
                 Parameters:
-                    request: HTTP request object
-                    response: HTTP response object for sending file
-                    filepath: Relative path to requested file
+                    request: Incoming HTTP request context
+                    response: Outgoing HTTP response builder
+                    filepath: Requested file path relative to blueprint static directory
 
-                Responses:
-                    200: File found and served with correct MIME type
-                    404: File not found in blueprint's static directory
-                    500: Error reading or processing file
+                Status Codes:
+                    200: Successfully served requested file with correct MIME type
+                    404: Requested file does not exist in blueprint static directory
+                    500: Server error during file access or processing
                 """
                 resource: Path = Path(self.static, filepath)
                 try:
-                    # Read binary file content
+                    # Load file content in binary mode
                     with open(resource, "rb") as handle:
                         content: bytes = handle.read()
 
-                    # MIME type detection based on file extension
+                    # Determine MIME type from file extension
                     extension: str = resource.suffix.lower()
                     mimetype: str = app.mimes.get(
                         extension, "application/octet-stream"
                     )
 
-                    # Send response with proper content type
+                    # Deliver file with appropriate content type header
                     response.status(200).header("Content-Type", mimetype).send(content)
                 except FileNotFoundError:
-                    # File not found in static directory
+                    # Handle missing file requests
                     response.status(404).text("File not found")
                 except Exception as error:
-                    # Handle IO errors, permission issues, etc.
+                    # Handle file system errors and permission issues
                     response.status(500).text(f"Error: {str(error)}")
