@@ -290,7 +290,7 @@ def log(request: Request, response: Response) -> bool:
 @app.route("/")
 def homepage(request: Request, response: Response) -> None:
     """
-    Homepage with user tracking middleware.
+    Homepage with user logging middleware.
     """
     response.json({
         "message": "Welcome to the homepage!"
