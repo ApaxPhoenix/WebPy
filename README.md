@@ -244,9 +244,9 @@ def dashboard(request: Request, response: Response) -> None:
     # Return JSON data with dashboard statistics
     response.json({"stats": {"users": 1250, "sessions": 37}})
 
-# Register blueprints with the application
-app.register(user)
-app.register(admin)
+# Add blueprints to the application
+app.blueprint(user)
+app.blueprint(admin)
 
 if __name__ == "__main__":
     # Start the server on port 8080
@@ -268,11 +268,11 @@ app = WebPy()
 # Initialize the middleware
 middleware = Middleware(app)
 
-# Create a user tracking middleware function
-@middleware.before("track_user")
-def track_user(request: Request, response: Response) -> bool:
+# Create a user logging middleware function
+@middleware.before("log")
+def log(request: Request, response: Response) -> bool:
     """
-    Track when users join the application.
+    Logs when users join the application.
 
     Args:
         request: The Request object
