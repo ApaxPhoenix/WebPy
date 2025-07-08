@@ -29,7 +29,7 @@ class Blueprint:
     """
 
     # Central storage for all instantiated blueprint components
-    registry: Dict[str, 'Blueprint'] = {}
+    registry: Dict[str, "Blueprint"] = {}
 
     def __init__(self, name: str, prefix: str = "") -> None:
         """
@@ -43,7 +43,7 @@ class Blueprint:
             KeyError: When attempting to register duplicate blueprint names
         """
         self.name: str = name
-        self.prefix: str = prefix.rstrip('/') if prefix else ''
+        self.prefix: str = prefix.rstrip("/") if prefix else ""
 
         # Blueprint resource directory structure
         self.directory: Path = Path("blueprints", name)
@@ -53,7 +53,9 @@ class Blueprint:
         # Add to global blueprint tracking system
         Blueprint.registry[name] = self
 
-    def route(self, path: str, methods: Optional[List[str]] = None) -> Callable[[HandlerType], HandlerType]:
+    def route(
+        self, path: str, methods: Optional[List[str]] = None
+    ) -> Callable[[HandlerType], HandlerType]:
         """
         Create route decorators with blueprint-aware URL handling.
 
@@ -85,7 +87,9 @@ class Blueprint:
             # Register with router using enhanced wrapper
             @Router.route(fullpath, methods)
             @wraps(handler)
-            def wrapper(request: RequestType, response: ResponseType, **params: Any) -> Any:
+            def wrapper(
+                request: RequestType, response: ResponseType, **params: Any
+            ) -> Any:
                 # Store reference to original template renderer
                 original = response.__class__.render
 
@@ -154,8 +158,8 @@ class Blueprint:
         if self.template.exists():
             # Preserve existing template loader configuration
             loaders = []
-            if hasattr(app.template, 'loader'):
-                if hasattr(app.template.loader, 'loaders'):
+            if hasattr(app.template, "loader"):
+                if hasattr(app.template.loader, "loaders"):
                     loaders = list(app.template.loader.loaders)
                 else:
                     loaders = [app.template.loader]
@@ -170,7 +174,9 @@ class Blueprint:
         if self.static.exists():
             # Create dedicated route for blueprint static files
             @app.route(f"/static/{self.name}/<path:filepath>", methods=["GET"])
-            def assets(request: RequestType, response: ResponseType, filepath: str) -> None:
+            def assets(
+                request: RequestType, response: ResponseType, filepath: str
+            ) -> None:
                 """
                 HTTP handler for serving blueprint-specific static resources.
 
@@ -196,9 +202,7 @@ class Blueprint:
 
                     # Determine MIME type from file extension
                     extension: str = resource.suffix.lower()
-                    mimetype: str = app.mimes.get(
-                        extension, "application/octet-stream"
-                    )
+                    mimetype: str = app.mimes.get(extension, "application/octet-stream")
 
                     # Deliver file with appropriate content type header
                     response.status(200).header("Content-Type", mimetype).send(content)

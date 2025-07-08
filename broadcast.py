@@ -7,7 +7,7 @@ import mimetypes
 from pathlib import Path
 
 # Type variables for fluent interface pattern
-R = TypeVar('R', bound='Response')
+R = TypeVar("R", bound="Response")
 
 # Type aliases for semantic clarity
 QueryDict = Dict[str, List[str]]  # Result structure from parse_qs

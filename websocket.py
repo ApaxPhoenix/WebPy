@@ -16,13 +16,6 @@ class WebSocket:
     using a simple event-based model similar to Socket.IO but with reduced complexity.
     The server manages concurrent client connections through threading, handles the complete
     connection lifecycle, and offers flexible message broadcasting.
-
-    Key capabilities:
-    - Decorator-based event handler registration
-    - Structured communication using JSON message format
-    - Automatic client connection management
-    - Efficient broadcasting to connected clients
-    - Thread-based concurrency for handling multiple clients
     """
 
     def __init__(self, app: Any):
@@ -38,7 +31,7 @@ class WebSocket:
         # Maps client sockets to their metadata (connection info, active state)
         self.registry: Dict[str, Dict[str, Any]] = {
             "clients": {},  # Maps socket object IDs to socket objects
-            "handlers": {}  # Maps event names to handler functions
+            "handlers": {},  # Maps event names to handler functions
         }
 
     def on(self, channel: str) -> Callable[[T], T]:
@@ -201,9 +194,7 @@ class WebSocket:
                 client, location = server.accept()
 
                 # Create dedicated thread for this client
-                worker = threading.Thread(
-                    target=self.handle, args=(client, location)
-                )
+                worker = threading.Thread(target=self.handle, args=(client, location))
                 # Set as daemon thread for automatic cleanup
                 worker.daemon = True
                 worker.start()

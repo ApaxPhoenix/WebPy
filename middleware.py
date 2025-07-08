@@ -29,7 +29,7 @@ class Middleware:
         self.app = app  # Reference to the main application
         self.map: Dict[str, Dict[str, Processor]] = {
             "before": {},  # Preprocessing middleware
-            "after": {}    # Postprocessing middleware
+            "after": {},  # Postprocessing middleware
         }
 
     @overload
@@ -38,7 +38,9 @@ class Middleware:
     @overload
     def before(self, name: str) -> Callable[[Processor], Processor]: ...
 
-    def before(self, name: str, handler: Optional[Processor] = None) -> Processor | Callable[[Processor], Processor]:
+    def before(
+        self, name: str, handler: Optional[Processor] = None
+    ) -> Processor | Callable[[Processor], Processor]:
         """
         Register a middleware function to execute before route handlers.
 
@@ -62,6 +64,7 @@ class Middleware:
             def decorator(handler: Processor) -> Processor:
                 self.map["before"][name] = handler
                 return handler
+
             return decorator
 
     @overload
@@ -70,7 +73,9 @@ class Middleware:
     @overload
     def after(self, name: str) -> Callable[[Processor], Processor]: ...
 
-    def after(self, name: str, handler: Optional[Processor] = None) -> Processor | Callable[[Processor], Processor]:
+    def after(
+        self, name: str, handler: Optional[Processor] = None
+    ) -> Processor | Callable[[Processor], Processor]:
         """
         Register a middleware function to execute after route handlers.
 
@@ -95,6 +100,7 @@ class Middleware:
             def decorator(handler: Processor) -> Processor:
                 self.map["after"][name] = handler
                 return handler
+
             return decorator
 
     def process(self, request: Request, response: Response) -> bool:

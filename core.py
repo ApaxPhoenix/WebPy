@@ -9,7 +9,9 @@ import warnings
 
 # Enhanced type definitions for improved type safety and clarity
 HandlerType = TypeVar("HandlerType", bound=Callable[[Request, Response, Any], None])
-ErrorHandlerType = TypeVar("ErrorHandlerType", bound=Callable[[Optional[Request], Response], None])
+ErrorHandlerType = TypeVar(
+    "ErrorHandlerType", bound=Callable[[Optional[Request], Response], None]
+)
 RouteResult = Tuple[HandlerType, Dict[str, Any]]
 GenericFunction = TypeVar("GenericFunction", bound=Callable)
 
@@ -80,7 +82,9 @@ class WebPyCore(BaseHTTPRequestHandler):
         self.process("DELETE")
 
     @classmethod
-    def route(cls, pattern: str, methods: Optional[List[str]] = None) -> Callable[[GenericFunction], GenericFunction]:
+    def route(
+        cls, pattern: str, methods: Optional[List[str]] = None
+    ) -> Callable[[GenericFunction], GenericFunction]:
         """
         Register route handlers for specific URL patterns and HTTP methods.
 
@@ -176,7 +180,7 @@ class WebPyCore(BaseHTTPRequestHandler):
         """
         try:
             # Extract relative path by removing the "/static/" prefix
-            resource: Path = Path(self.static, filepath[len("/static/"):])
+            resource: Path = Path(self.static, filepath[len("/static/") :])
 
             # Read file content as binary data
             with open(resource, "rb") as filedata:
@@ -220,13 +224,13 @@ class WebPyCore(BaseHTTPRequestHandler):
 
     @classmethod
     def run(
-            cls,
-            ip: str = "127.0.0.1",
-            port: int = 8080,
-            server: Type[ThreadingHTTPServer] = ThreadingHTTPServer,
-            handler: Optional[Type[BaseHTTPRequestHandler]] = None,
-            certfile: Optional[str] = None,
-            keyfile: Optional[str] = None,
+        cls,
+        ip: str = "127.0.0.1",
+        port: int = 8080,
+        server: Type[ThreadingHTTPServer] = ThreadingHTTPServer,
+        handler: Optional[Type[BaseHTTPRequestHandler]] = None,
+        certfile: Optional[str] = None,
+        keyfile: Optional[str] = None,
     ) -> None:
         """
         Start the web application server with optional HTTPS support.

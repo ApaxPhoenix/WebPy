@@ -26,16 +26,16 @@ class Sessions:
         self.container = SimpleCookie()
 
     def add(
-            self,
-            identity: Union[str, Dict[str, str]],
-            value: Optional[str] = None,
-            path: str = "/",
-            domain: Optional[str] = None,
-            secure: bool = False,
-            httponly: bool = False,
-            samesite: Optional[str] = None,
-            expires: Optional[int] = None,
-            maxage: Optional[int] = None,
+        self,
+        identity: Union[str, Dict[str, str]],
+        value: Optional[str] = None,
+        path: str = "/",
+        domain: Optional[str] = None,
+        secure: bool = False,
+        httponly: bool = False,
+        samesite: Optional[str] = None,
+        expires: Optional[int] = None,
+        maxage: Optional[int] = None,
     ) -> Union[None, Dict[str, bool]]:
         """
         Create new cookie(s) with specified attributes.
@@ -80,12 +80,15 @@ class Sessions:
                     if samesite in policies:
                         self.container[name]["samesite"] = samesite
                     else:
-                        raise ValueError(f"Invalid samesite value: {samesite}. Must be one of {policies}")
+                        raise ValueError(
+                            f"Invalid samesite value: {samesite}. Must be one of {policies}"
+                        )
 
                 if expires:
                     expiration = time.time() + expires
                     self.container[name]["expires"] = time.strftime(
-                        "%a, %d %b %Y %H:%M:%S GMT", time.gmtime(expiration))
+                        "%a, %d %b %Y %H:%M:%S GMT", time.gmtime(expiration)
+                    )
 
                 if maxage:
                     self.container[name]["max-age"] = str(maxage)
@@ -111,18 +114,22 @@ class Sessions:
                 if samesite in policies:
                     self.container[identity]["samesite"] = samesite
                 else:
-                    raise ValueError(f"Invalid samesite value: {samesite}. Must be one of {policies}")
+                    raise ValueError(
+                        f"Invalid samesite value: {samesite}. Must be one of {policies}"
+                    )
 
             if expires:
                 expiration = time.time() + expires
                 self.container[identity]["expires"] = time.strftime(
-                    "%a, %d %b %Y %H:%M:%S GMT", time.gmtime(expiration))
+                    "%a, %d %b %Y %H:%M:%S GMT", time.gmtime(expiration)
+                )
 
             if maxage:
                 self.container[identity]["max-age"] = str(maxage)
 
-    def get(self, identity: Union[str, List[str]], default: Optional[str] = None) -> Union[
-        Optional[str], Dict[str, Optional[str]]]:
+    def get(
+        self, identity: Union[str, List[str]], default: Optional[str] = None
+    ) -> Union[Optional[str], Dict[str, Optional[str]]]:
         """
         Retrieve cookie value(s) from the session.
 
@@ -147,10 +154,10 @@ class Sessions:
             return default
 
     def update(
-            self,
-            identity: Union[str, Dict[str, str]],
-            value: Optional[str] = None,
-            preserve: bool = True,
+        self,
+        identity: Union[str, Dict[str, str]],
+        value: Optional[str] = None,
+        preserve: bool = True,
     ) -> Union[bool, Dict[str, bool]]:
         """
         Modify existing cookie value(s) with option to retain attributes.
@@ -176,11 +183,17 @@ class Sessions:
             return results
         else:
             if value is None:
-                raise ValueError("Value must be provided when updating a single cookie.")
+                raise ValueError(
+                    "Value must be provided when updating a single cookie."
+                )
 
             if identity in self.container:
                 if preserve:
-                    properties = {key: val for key, val in self.container[identity].items() if key != "value"}
+                    properties = {
+                        key: val
+                        for key, val in self.container[identity].items()
+                        if key != "value"
+                    }
                     self.container[identity] = quote(value)
                     for key, val in properties.items():
                         self.container[identity][key] = val
@@ -213,8 +226,12 @@ class Sessions:
                 return True
             return False
 
-    def expire(self, identity: Union[str, List[str]], path: str = "/", domain: Optional[str] = None) -> Union[
-        bool, Dict[str, bool]]:
+    def expire(
+        self,
+        identity: Union[str, List[str]],
+        path: str = "/",
+        domain: Optional[str] = None,
+    ) -> Union[bool, Dict[str, bool]]:
         """
         Force cookie expiration on the client browser.
 

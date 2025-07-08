@@ -36,13 +36,13 @@ project/
 
 ### Creating Your First App
 
-To create a simple WebPy app, initialize the `WebPyCore` class and define your routes. The `run()` method starts the server.
+To create a simple WebPy app, initialize the`WebPy` class and define your routes. The `run()` method starts the server.
 
 ```python
-from core import WebPyCore
+from webpy import WebPy
 
 # Initialize the WebPy application
-app = WebPyCore()
+app = WebPy()
 
 def main() -> None:
     """

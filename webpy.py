@@ -29,7 +29,9 @@ class WebPy:
         self.app: Type[WebPyCore] = WebPyCore
         self.middleware = Middleware(self)
 
-    def route(self, path: str, methods: Optional[List[str]] = None) -> Callable[[Handler], Handler]:
+    def route(
+        self, path: str, methods: Optional[List[str]] = None
+    ) -> Callable[[Handler], Handler]:
         """
         Define URL routing for incoming HTTP requests.
 
@@ -62,8 +64,8 @@ class WebPy:
 
             # Middleware-aware wrapper for request processing
             def wrapper(*args: Any, **kwargs: Any) -> Any:
-                request = kwargs.get('request') or args[0]
-                response = kwargs.get('response') or args[1]
+                request = kwargs.get("request") or args[0]
+                response = kwargs.get("response") or args[1]
 
                 # Run pre-processing middleware pipeline
                 if self.middleware.process(request, response):
@@ -144,11 +146,11 @@ class WebPy:
         blueprint.blueprint(self.app)
 
     def run(
-            self,
-            ip: str = "0.0.0.0",
-            port: int = 8080,
-            certfile: Optional[str] = None,
-            keyfile: Optional[str] = None,
+        self,
+        ip: str = "0.0.0.0",
+        port: int = 8080,
+        certfile: Optional[str] = None,
+        keyfile: Optional[str] = None,
     ) -> None:
         """
         Launch the web server with configured application settings.

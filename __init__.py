@@ -8,12 +8,12 @@ from .blueprint import Blueprint
 # Export the main classes and components
 __all__ = [
     "WebPyCore",  # The core application class
-    "Router",     # The router for handling routes
-    "Request",    # The request object for handling incoming requests
-    "Response",   # The response object for sending responses
-    "Middleware", # The middleware system for request/response processing
-    "Sessions",   # The session management system
-    "Blueprint"   # The blueprint system for modular applications
+    "Router",  # The router for handling routes
+    "Request",  # The request object for handling incoming requests
+    "Response",  # The response object for sending responses
+    "Middleware",  # The middleware system for request/response processing
+    "Sessions",  # The session management system
+    "Blueprint",  # The blueprint system for modular applications
 ]
 
 # Package metadata
@@ -26,5 +26,6 @@ __email__ = "andromedeyz@hotmail.com"
 
 # Python version compatibility enforcement
 import sys
+
 if sys.version_info < (3, 9):
     raise RuntimeError("WebPy requires Python 3.9 or higher")
