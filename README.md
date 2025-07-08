@@ -575,6 +575,111 @@ if __name__ == "__main__":
     app.run(port=8080)
 ```
 
+
+### WebSocket Support
+
+WebPy includes built-in WebSocket support for real-time bidirectional communication between server and clients using an event-driven architecture.
+
+```python
+from webpy import WebPy
+from websocket import WebSocket
+from broadcast import Request, Response
+import threading
+import time
+
+# Initialize the WebPy application
+app = WebPy()
+
+# Initialize WebSocket server
+ws = WebSocket(app)
+
+@ws.on("message")
+def chat(data, client):
+    """
+    Handle incoming chat messages.
+    
+    Args:
+        data: Message data from client
+        client: Client socket object
+        
+    Returns:
+        None: Broadcasts message to all connected clients
+    """
+    user = data.get("user", "Anonymous")
+    text = data.get("text", "")
+    
+    # Broadcast message to all connected clients
+    ws.emit("message", {
+        "user": user,
+        "text": text,
+        "timestamp": int(time.time())
+    })
+
+@ws.on("join")
+def join(data, client):
+    """
+    Handle user joining the chat.
+    
+    Args:
+        data: Join data from client
+        client: Client socket object
+        
+    Returns:
+        None: Notifies all clients about new user
+    """
+    user = data.get("user", "Anonymous")
+    
+    # Notify all clients about new user
+    ws.emit("join", {
+        "user": user,
+        "message": f"{user} joined the chat"
+    })
+
+@ws.on("leave")
+def leave(data, client):
+    """
+    Handle user leaving the chat.
+    
+    Args:
+        data: Leave data from client
+        client: Client socket object
+        
+    Returns:
+        None: Notifies all clients about user leaving
+    """
+    user = data.get("user", "Anonymous")
+    
+    # Notify all clients about user leaving
+    ws.emit("leave", {
+        "user": user,
+        "message": f"{user} left the chat"
+    })
+
+@ws.on("disconnect")
+def disconnect(data, client):
+    """
+    Handle client disconnection.
+    
+    Args:
+        data: Disconnect data from client
+        client: Client socket object
+        
+    Returns:
+        None: Performs cleanup when client disconnects
+    """
+    print(f"Client disconnected: {client}")
+    # Client cleanup is handled automatically by the WebSocket server
+
+if __name__ == "__main__":
+    # Start WebSocket server on port 8081 in a separate thread
+    ws_thread = threading.Thread(target=ws.run, kwargs={"host": "127.0.0.1", "port": 8081})
+    ws_thread.daemon = True
+    ws_thread.start()
+    
+    # Start HTTP server on port 8080
+    app.run(port=8080)
+```
+
 ### HTTPS Support
 
 WebPy supports HTTPS out of the box, allowing you to secure your app with SSL/TLS.
