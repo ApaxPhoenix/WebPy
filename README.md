@@ -15,6 +15,7 @@
 | **Error Handling**      | Define custom error pages and responses.                    |
 | **Blueprint System**    | Organize your app into modular components.                  |
 | **Middleware System**   | Process requests/responses through customizable pipelines.  |
+| **WebSocket Support**   | Bidirectional communication with event-driven architecture. |
 
 ## Project Structure
 
@@ -575,7 +576,6 @@ if __name__ == "__main__":
     app.run(port=8080)
 ```
 
-
 ### WebSocket Support
 
 WebPy includes built-in WebSocket support for real-time bidirectional communication between server and clients using an event-driven architecture.
@@ -672,9 +672,9 @@ def disconnect(data, client):
 
 if __name__ == "__main__":
     # Start WebSocket server on port 8081 in a separate thread
-    ws_thread = threading.Thread(target=ws.run, kwargs={"host": "127.0.0.1", "port": 8081})
-    ws_thread.daemon = True
-    ws_thread.start()
+    thread = threading.Thread(target=ws.run, kwargs={"host": "127.0.0.1", "port": 8081})
+    thread.daemon = True
+    thread.start()
     
     # Start HTTP server on port 8080
     app.run(port=8080)
