@@ -1,9 +1,10 @@
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Any, Type, Tuple, TypeVar, cast
+from typing import Callable, Dict, List, Optional, Any, Tuple, TypeVar, cast
 from jinja2 import Environment, FileSystemLoader
 from .router import Router
 from .broadcast import Request, Response
+from . import mimes
 import ssl
 import warnings
 
@@ -14,56 +15,37 @@ ErrorHandlerType = TypeVar(
 )
 RouteResult = Tuple[HandlerType, Dict[str, Any]]
 GenericFunction = TypeVar("GenericFunction", bound=Callable)
+NetworkInterface = str
+PortNumber = int
+TemplateName = str
+TemplateContext = Dict[str, Any]
+RenderedHtml = str
+HttpMethod = str
+UrlPath = str
+HttpStatus = int
+ErrorMessage = str
+FilePath = str
+SslCertPath = str
+SslKeyPath = str
 
 
 class WebPyCore(BaseHTTPRequestHandler):
     """
-    Comprehensive HTTP server framework with integrated routing, templating,
-    and error handling capabilities.
-
-    Provides a unified approach to web application development through:
-    - Declarative routing with path parameters
-    - Template-based rendering via Jinja2
-    - Static file serving with MIME type detection
-    - Custom error handling with fallbacks
-    - Support for both HTTP and HTTPS connections
+    Comprehensive HTTP server framework with integrated routing and templating.
 
     This class serves as both the request handler and the application framework,
-    allowing for a cohesive development experience with minimal boilerplate.
+    providing routing capabilities, template rendering, static file serving,
+    and custom error handling for web application development.
     """
 
     # Templating engine configuration with filesystem-based template loading
-    template = Environment(loader=FileSystemLoader(Path("templates")))
+    template: Environment = Environment(loader=FileSystemLoader(Path("templates")))
 
     # Static file directory for serving assets like CSS, JavaScript and images
-    static = Path("static")
-
-    # Comprehensive MIME type mapping for content-type detection
-    mimes: Dict[str, str] = {
-        ".html": "text/html",
-        ".css": "text/css",
-        ".js": "application/javascript",
-        ".txt": "text/plain",
-        ".json": "application/json",
-        ".xml": "application/xml",
-        ".pdf": "application/pdf",
-        ".zip": "application/zip",
-        ".png": "image/png",
-        ".jpg": "image/jpeg",
-        ".jpeg": "image/jpeg",
-        ".gif": "image/gif",
-        ".svg": "image/svg+xml",
-        ".mp3": "audio/mpeg",
-        ".ogg": "audio/ogg",
-        ".mp4": "video/mp4",
-        ".webm": "video/webm",
-        ".woff": "font/woff",
-        ".woff2": "font/woff2",
-        ".ttf": "font/ttf",
-    }
+    static: Path = Path("static")
 
     # Registry for custom error handlers mapped by status code
-    errors: Dict[int, ErrorHandlerType] = {}
+    errors: Dict[HttpStatus, ErrorHandlerType] = {}
 
     def do_GET(self) -> None:
         """Process GET requests by delegating to the central request handler."""
@@ -83,7 +65,7 @@ class WebPyCore(BaseHTTPRequestHandler):
 
     @classmethod
     def route(
-        cls, pattern: str, methods: Optional[List[str]] = None
+        cls, pattern: UrlPath, methods: Optional[List[HttpMethod]] = None
     ) -> Callable[[GenericFunction], GenericFunction]:
         """
         Register route handlers for specific URL patterns and HTTP methods.
@@ -92,9 +74,8 @@ class WebPyCore(BaseHTTPRequestHandler):
         for intuitive mapping between URL paths and handler functions.
 
         Parameters:
-            pattern: URL pattern to match, supporting path parameters with syntax:
-                    - Simple parameter: '<name>'
-                    - Typed parameter: '<type:name>' (e.g., '<int:id>')
+            pattern: URL pattern to match, supporting path parameters with syntax
+                    like '<name>' or '<type:name>' (e.g., '<int:id>')
             methods: List of HTTP methods this route should handle (defaults to ["GET"])
 
         Returns:
@@ -111,7 +92,7 @@ class WebPyCore(BaseHTTPRequestHandler):
         return decoration
 
     @classmethod
-    def error(cls, status: int) -> Callable[[ErrorHandlerType], ErrorHandlerType]:
+    def error(cls, status: HttpStatus) -> Callable[[ErrorHandlerType], ErrorHandlerType]:
         """
         Register custom error handlers for specific HTTP status codes.
 
@@ -132,15 +113,12 @@ class WebPyCore(BaseHTTPRequestHandler):
 
         return decoration
 
-    def process(self, method: str) -> None:
+    def process(self, method: HttpMethod) -> None:
         """
         Central request processing pipeline for all HTTP methods.
 
-        Handles the complete request lifecycle:
-        1. Route matching based on request path and method
-        2. Static file serving for assets under /static/
-        3. Invoking the appropriate handler with extracted parameters
-        4. Error handling for various failure scenarios
+        Handles the complete request lifecycle including route matching,
+        static file serving, handler invocation, and error handling.
 
         Parameters:
             method: HTTP method of the current request (GET, POST, etc.)
@@ -168,12 +146,12 @@ class WebPyCore(BaseHTTPRequestHandler):
             # Catch and handle any unhandled exceptions as 500 errors
             self.warn(500, f"Internal Server Error: {str(exception)}")
 
-    def deliver(self, filepath: str) -> None:
+    def deliver(self, filepath: FilePath) -> None:
         """
         Serve static files with appropriate MIME type detection.
 
         Handles delivery of files from the static directory with proper content
-        types determined by file extension, supporting a wide range of asset types.
+        types determined by file extension.
 
         Parameters:
             filepath: Request path to the static file (starting with "/static/")
@@ -188,7 +166,7 @@ class WebPyCore(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header(
                     "Content-type",
-                    self.mimes.get(resource.suffix.lower(), "application/octet-stream"),
+                    mimes.get(resource.suffix.lower(), "application/octet-stream"),
                 )
                 self.end_headers()
                 self.wfile.write(filedata.read())
@@ -201,12 +179,12 @@ class WebPyCore(BaseHTTPRequestHandler):
             self.warn(500, "Internal Server Error")
 
     @staticmethod
-    def render(template_name: str, **context: Any) -> str:
+    def render(template_name: TemplateName, **context: TemplateContext) -> RenderedHtml:
         """
         Render HTML templates with Jinja2 templating engine.
 
-        Provides powerful templating capabilities for generating dynamic HTML
-        content with context variables, template inheritance, and more.
+        Provides templating capabilities for generating dynamic HTML
+        content with context variables and template inheritance.
 
         Parameters:
             template_name: Name of the template file to render
@@ -214,9 +192,6 @@ class WebPyCore(BaseHTTPRequestHandler):
 
         Returns:
             Rendered HTML content as a string
-
-        Example:
-            response.html(WebPyCore.render('user_profile.html', user=user, editable=True))
         """
         # Load the template by name and render with provided context
         template = WebPyCore.template.get_template(template_name)
@@ -225,40 +200,33 @@ class WebPyCore(BaseHTTPRequestHandler):
     @classmethod
     def run(
         cls,
-        ip: str = "127.0.0.1",
-        port: int = 8080,
-        server: Type[ThreadingHTTPServer] = ThreadingHTTPServer,
-        handler: Optional[Type[BaseHTTPRequestHandler]] = None,
-        certfile: Optional[str] = None,
-        keyfile: Optional[str] = None,
+        ip: NetworkInterface = "127.0.0.1",
+        port: PortNumber = 8080,
+        certfile: Optional[SslCertPath] = None,
+        keyfile: Optional[SslKeyPath] = None,
     ) -> None:
         """
         Start the web application server with optional HTTPS support.
 
-        This method initializes and runs the HTTP/HTTPS server, binding it to the specified
-        IP address and port. It supports both HTTP and HTTPS protocols, with HTTPS enabled
-        when both `certfile` and `keyfile` are provided.
+        Initializes and runs the HTTP/HTTPS server, binding it to the specified
+        IP address and port. HTTPS is enabled when both certfile and keyfile
+        are provided.
 
         Parameters:
-            ip: IP address to bind the server to (default: "127.0.0.1").
-            port: TCP port to listen on (default: 8080).
-            server: The server class to use (default: `ThreadingHTTPServer`).
-            handler: The request handler class to use. If not provided, defaults to `WebPyCore`.
-            certfile: Path to the SSL certificate file for HTTPS (optional).
-            keyfile: Path to the SSL private key file for HTTPS (optional).
+            ip: IP address to bind the server to (default: "127.0.0.1")
+            port: TCP port to listen on (default: 8080)
+            certfile: Path to the SSL certificate file for HTTPS (optional)
+            keyfile: Path to the SSL private key file for HTTPS (optional)
 
         Raises:
-            OSError: If the server cannot bind to the specified IP and port.
+            OSError: If the server cannot bind to the specified IP and port
 
         Note:
-            To enable HTTPS, both `certfile` and `keyfile` must be provided. If only one is
+            To enable HTTPS, both certfile and keyfile must be provided. If only one is
             provided, a warning will be issued, and the server will fall back to HTTP.
         """
-        if handler is None:
-            handler = cls
-
         # Initialize the server with the specified IP, port, and handler
-        instance = server((ip, port), handler)
+        instance: ThreadingHTTPServer = ThreadingHTTPServer((ip, port), cls)
 
         # Validate SSL configuration (both certfile and keyfile are required for HTTPS)
         if bool(certfile) != bool(keyfile):
@@ -267,7 +235,7 @@ class WebPyCore(BaseHTTPRequestHandler):
             )
         elif certfile and keyfile:
             # Configure HTTPS if both certfile and keyfile are provided
-            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context: ssl.SSLContext = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             context.load_cert_chain(certfile=certfile, keyfile=keyfile)
             instance.socket = context.wrap_socket(instance.socket, server_side=True)
             print(f"Starting HTTPS server on {ip}:{port}")
@@ -282,7 +250,7 @@ class WebPyCore(BaseHTTPRequestHandler):
             warnings.warn(f"Error starting server: {exception}")
             raise
 
-    def warn(self, status: int, message: str) -> None:
+    def warn(self, status: HttpStatus, message: ErrorMessage) -> None:
         """
         Process HTTP errors with custom handlers when available.
 
@@ -295,8 +263,8 @@ class WebPyCore(BaseHTTPRequestHandler):
         """
         if status in self.errors:
             # Use registered custom error handler if available
-            response = Response(self)
-            handler = self.errors[status]
+            response: Response = Response(self)
+            handler: ErrorHandlerType = self.errors[status]
             handler(None, response)  # No request object in error context
             response.send()
         else:

@@ -1,7 +1,22 @@
 from http.cookies import SimpleCookie
-from typing import Optional, Dict, List, Union
+from typing import Optional, Dict, List, Union, TypeVar
 import time
 from urllib.parse import quote, unquote
+
+# Enhanced type definitions for improved type safety and clarity
+T = TypeVar("T")
+SessionsType = TypeVar("SessionsType", bound="Sessions")
+CookieName = str
+CookieValue = str
+CookieDict = Dict[CookieName, CookieValue]
+CookieAttributes = Dict[str, str]
+BulkCookieResult = Dict[CookieName, bool]
+CookieContainer = SimpleCookie
+DomainName = str
+PathString = str
+SameSitePolicy = str
+ExpirationTime = int
+MaxAgeSeconds = int
 
 
 class Sessions:
@@ -10,10 +25,8 @@ class Sessions:
 
     Provides a comprehensive interface for managing browser cookies with support
     for creating, reading, updating, and deleting cookies with fine-grained control
-    over security attributes, expiration, and cross-site behavior.
-
-    The Sessions class abstracts away the complexity of cookie handling while
-    enforcing best practices for secure cookie management in web applications.
+    over security attributes, expiration, and cross-site behavior for secure
+    web application session management.
     """
 
     def __init__(self) -> None:
@@ -23,26 +36,26 @@ class Sessions:
         Creates an empty SimpleCookie container that will store and track
         all cookie operations throughout the application lifecycle.
         """
-        self.container = SimpleCookie()
+        self.container: CookieContainer = SimpleCookie()
 
     def add(
         self,
-        identity: Union[str, Dict[str, str]],
-        value: Optional[str] = None,
-        path: str = "/",
-        domain: Optional[str] = None,
+        identity: Union[CookieName, CookieDict],
+        value: Optional[CookieValue] = None,
+        path: PathString = "/",
+        domain: Optional[DomainName] = None,
         secure: bool = False,
         httponly: bool = False,
-        samesite: Optional[str] = None,
-        expires: Optional[int] = None,
-        maxage: Optional[int] = None,
-    ) -> Union[None, Dict[str, bool]]:
+        samesite: Optional[SameSitePolicy] = None,
+        expires: Optional[ExpirationTime] = None,
+        maxage: Optional[MaxAgeSeconds] = None,
+    ) -> Union[None, BulkCookieResult]:
         """
         Create new cookie(s) with specified attributes.
 
         Adds one or multiple cookies to the session management system with
         configurable security features and expiration settings. Supports both
-        individual and bulk cookie creation.
+        individual and bulk cookie creation with comprehensive attribute control.
 
         Parameters:
             identity: Cookie name or dictionary of cookie name-value pairs
@@ -63,7 +76,9 @@ class Sessions:
             ValueError: When missing value for single cookie or invalid samesite value
         """
         if isinstance(identity, dict):
-            results = {}
+            results: BulkCookieResult = {}
+            name: CookieName
+            content: CookieValue
             for name, content in identity.items():
                 self.container[name] = quote(content)
                 self.container[name]["path"] = path
@@ -76,7 +91,7 @@ class Sessions:
                     self.container[name]["httponly"] = True
 
                 if samesite:
-                    policies = ["Strict", "Lax", "None"]
+                    policies: List[SameSitePolicy] = ["Strict", "Lax", "None"]
                     if samesite in policies:
                         self.container[name]["samesite"] = samesite
                     else:
@@ -85,7 +100,7 @@ class Sessions:
                         )
 
                 if expires:
-                    expiration = time.time() + expires
+                    expiration: float = time.time() + expires
                     self.container[name]["expires"] = time.strftime(
                         "%a, %d %b %Y %H:%M:%S GMT", time.gmtime(expiration)
                     )
@@ -127,9 +142,11 @@ class Sessions:
             if maxage:
                 self.container[identity]["max-age"] = str(maxage)
 
+        return None
+
     def get(
-        self, identity: Union[str, List[str]], default: Optional[str] = None
-    ) -> Union[Optional[str], Dict[str, Optional[str]]]:
+        self, identity: Union[CookieName, List[CookieName]], default: Optional[CookieValue] = None
+    ) -> Union[Optional[CookieValue], Dict[CookieName, Optional[CookieValue]]]:
         """
         Retrieve cookie value(s) from the session.
 
@@ -144,7 +161,8 @@ class Sessions:
             Single cookie value or dictionary of cookie values mapped by name
         """
         if isinstance(identity, list):
-            results = {}
+            results: Dict[CookieName, Optional[CookieValue]] = {}
+            name: CookieName
             for name in identity:
                 results[name] = self.get(name, default)
             return results
@@ -155,10 +173,10 @@ class Sessions:
 
     def update(
         self,
-        identity: Union[str, Dict[str, str]],
-        value: Optional[str] = None,
+        identity: Union[CookieName, CookieDict],
+        value: Optional[CookieValue] = None,
         preserve: bool = True,
-    ) -> Union[bool, Dict[str, bool]]:
+    ) -> Union[bool, BulkCookieResult]:
         """
         Modify existing cookie value(s) with option to retain attributes.
 
@@ -177,7 +195,9 @@ class Sessions:
             ValueError: When missing value for single cookie update
         """
         if isinstance(identity, dict):
-            results = {}
+            results: BulkCookieResult = {}
+            name: CookieName
+            content: CookieValue
             for name, content in identity.items():
                 results[name] = self.update(name, content, preserve)
             return results
@@ -189,12 +209,14 @@ class Sessions:
 
             if identity in self.container:
                 if preserve:
-                    properties = {
+                    properties: Dict[str, str] = {
                         key: val
                         for key, val in self.container[identity].items()
                         if key != "value"
                     }
                     self.container[identity] = quote(value)
+                    key: str
+                    val: str
                     for key, val in properties.items():
                         self.container[identity][key] = val
                 else:
@@ -202,7 +224,7 @@ class Sessions:
                 return True
             return False
 
-    def remove(self, identity: Union[str, List[str]]) -> Union[bool, Dict[str, bool]]:
+    def remove(self, identity: Union[CookieName, List[CookieName]]) -> Union[bool, BulkCookieResult]:
         """
         Delete cookie(s) from the session container.
 
@@ -216,7 +238,8 @@ class Sessions:
             Success status for single removal or dictionary of success statuses
         """
         if isinstance(identity, list):
-            results = {}
+            results: BulkCookieResult = {}
+            name: CookieName
             for name in identity:
                 results[name] = self.remove(name)
             return results
@@ -228,10 +251,10 @@ class Sessions:
 
     def expire(
         self,
-        identity: Union[str, List[str]],
-        path: str = "/",
-        domain: Optional[str] = None,
-    ) -> Union[bool, Dict[str, bool]]:
+        identity: Union[CookieName, List[CookieName]],
+        path: PathString = "/",
+        domain: Optional[DomainName] = None,
+    ) -> Union[bool, BulkCookieResult]:
         """
         Force cookie expiration on the client browser.
 
@@ -248,7 +271,8 @@ class Sessions:
             Success status for single expiration or dictionary of success statuses
         """
         if isinstance(identity, list):
-            results = {}
+            results: BulkCookieResult = {}
+            name: CookieName
             for name in identity:
                 results[name] = self.expire(name, path, domain)
             return results
@@ -267,7 +291,7 @@ class Sessions:
 
             return True
 
-    def all(self) -> Dict[str, str]:
+    def all(self) -> CookieDict:
         """
         Retrieve all cookie values as a simple dictionary.
 
@@ -279,7 +303,7 @@ class Sessions:
         """
         return {name: unquote(morsel.value) for name, morsel in self.container.items()}
 
-    def exists(self, identity: str) -> bool:
+    def exists(self, identity: CookieName) -> bool:
         """
         Check for cookie existence in the session.
 
@@ -307,7 +331,7 @@ class Sessions:
         """
         return self.container.output(header="", sep="\r\nSet-Cookie: ")
 
-    def attributes(self, identity: str) -> Dict[str, str]:
+    def attributes(self, identity: CookieName) -> CookieAttributes:
         """
         Extract all properties of a specific cookie.
 
@@ -325,9 +349,11 @@ class Sessions:
             return {}
 
         morsel = self.container[identity]
-        properties = {"value": unquote(morsel.value)}
+        properties: CookieAttributes = {"value": unquote(morsel.value)}
 
         # Add all non-value attributes
+        key: str
+        val: str
         for key, val in morsel.items():
             if key != "value":
                 properties[key] = val

@@ -23,10 +23,8 @@ class Request:
 
     Abstracts the underlying HTTP request details into a convenient interface,
     offering simple property access to common request components including
-    method, path, query parameters, headers, and body content.
-
-    This class simplifies request processing by parsing raw HTTP data into
-    structured objects and providing type-safe accessors for common operations.
+    method, path, query parameters, headers, and body content for simplified
+    request processing and type-safe operation handling.
     """
 
     def __init__(self, handler: HttpHandler) -> None:
@@ -133,15 +131,8 @@ class Response:
 
     Provides a clean API for constructing HTTP responses with various
     content types, status codes, and headers. Supports method chaining
-    for concise response construction.
-
-    Features include:
-    - Content type-specific methods (json, text, html)
-    - Status code management
-    - Header manipulation
-    - Standardized API responses
-    - File serving
-    - Redirects
+    for concise response construction and standardized API responses
+    across different HTTP methods and content formats.
     """
 
     def __init__(self, handler: HttpHandler) -> None:
@@ -207,13 +198,8 @@ class Response:
         Generate standardized API response based on HTTP method.
 
         Creates consistent API responses with appropriate status codes
-        and messages tailored to the request's HTTP method:
-
-        - GET: Returns data directly (200)
-        - POST: Returns creation confirmation with data (201)
-        - PUT: Returns update confirmation with data (200)
-        - DELETE: Returns deletion confirmation (204)
-        - Other methods: Returns method not allowed error (405)
+        and messages tailored to the request's HTTP method with standard
+        REST conventions for different operations and resource interactions.
 
         Parameters:
             data: Optional payload to include in response
@@ -274,9 +260,6 @@ class Response:
 
         Returns:
             Self for method chaining
-
-        Warning:
-            Logs warning if file not found but returns unchanged response
         """
         try:
             location: Path = Path(filepath)
@@ -305,17 +288,12 @@ class Response:
         Configure response as HTTP redirect.
 
         Sets up appropriate status code and Location header
-        to redirect client to specified URL.
+        to redirect client to specified URL with standard
+        HTTP redirect status codes and proper header configuration.
 
         Parameters:
             destination: Target URL for redirect
             statuscode: HTTP status code to use (default: 302 Found)
-                        Common options:
-                        - 301: Moved Permanently
-                        - 302: Found (temporary)
-                        - 303: See Other
-                        - 307: Temporary Redirect
-                        - 308: Permanent Redirect
 
         Returns:
             Self for method chaining

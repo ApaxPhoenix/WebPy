@@ -19,13 +19,7 @@ class Blueprint:
     Provides a clean abstraction for grouping related routes, templates, and static
     resources under a unified namespace. Each Blueprint operates with its own URL
     prefix and resource directories, allowing for hierarchical application design
-    and component reusability.
-
-    Key capabilities include:
-    - Isolated routing with automatic URL prefixing
-    - Dedicated template and static file directories
-    - Namespace collision prevention through named registration
-    - Seamless integration with main application infrastructure
+    and component reusability across different application contexts.
     """
 
     # Central storage for all instantiated blueprint components

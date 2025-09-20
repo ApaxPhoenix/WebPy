@@ -24,12 +24,9 @@ class Router:
     A flexible URL router that handles path registration and matching with support for
     dynamic path parameters using regular expressions.
 
-    This router maps URL paths to handler functions and supports pattern matching for
-    dynamic path segments (e.g., "/users/<id:int>", "/posts/<slug:str>").
-
-    Attributes:
-        routes: A dictionary mapping path patterns to their handlers,
-            allowed HTTP methods, and compiled regex patterns.
+    Maps URL paths to handler functions with pattern matching capabilities for
+    dynamic path segments, enabling parameterized routing and flexible URL
+    structure handling in web applications.
     """
 
     routes: Dict[str, RouteEntry] = {}
@@ -39,11 +36,9 @@ class Router:
         """
         Decorator to register a route handler with an optional list of HTTP methods.
 
-        This method converts dynamic path segments into regex capture groups and
-        associates the path with a handler function.
-
-        Dynamic segments can be specified using the format: <name:type>
-        For example: "/users/<id:int>" or "/posts/<slug:str>"
+        Converts dynamic path segments into regex capture groups and associates
+        the path pattern with a handler function for request routing and parameter
+        extraction during URL matching operations.
 
         Args:
             path: The route path pattern, which may include dynamic segments.
@@ -88,8 +83,9 @@ class Router:
         """
         Match an incoming request path and method against registered routes.
 
-        This method iterates through all registered routes to find one that matches
-        both the URL path pattern and the HTTP method.
+        Iterates through registered routes to find matching URL path patterns
+        and HTTP methods, returning the associated handler function and extracted
+        parameters for successful matches.
 
         Args:
             path: The request URL path to match.
@@ -129,8 +125,9 @@ class Router:
         """
         Get a list of HTTP methods allowed for a specific path.
 
-        This is useful for implementing OPTIONS requests or for
-        responding with appropriate Allow headers for 405 Method Not Allowed responses.
+        Determines allowed HTTP methods for a given path by matching against
+        registered route patterns, useful for implementing OPTIONS requests
+        and generating appropriate Allow headers for method validation.
 
         Args:
             path: The URL path to check for allowed methods.

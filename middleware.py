@@ -11,9 +11,10 @@ class Middleware:
     """
     Middleware management system for WebPy applications.
 
-    Provides a way to register functions that run before and after
-    route handlers, allowing for request/response modification,
-    logging, authentication, and other cross-cutting concerns.
+    Provides a structured approach to register and execute functions that
+    process requests and responses during the HTTP request lifecycle,
+    enabling cross-cutting concerns such as authentication, logging,
+    and request modification in a modular and reusable manner.
     """
 
     def __init__(self, app: Any) -> None:
@@ -44,8 +45,9 @@ class Middleware:
         """
         Register a middleware function to execute before route handlers.
 
-        These functions can inspect and modify the incoming request,
-        or halt the request processing pipeline if needed.
+        Allows inspection and modification of incoming requests or halting
+        the request processing pipeline through middleware functions that
+        execute prior to route handler invocation.
 
         Args:
             name: Unique identifier for this middleware function
@@ -79,8 +81,9 @@ class Middleware:
         """
         Register a middleware function to execute after route handlers.
 
-        These functions can inspect and modify the outgoing response,
-        such as adding headers or transforming the response body.
+        Enables inspection and modification of outgoing responses through
+        middleware functions that execute after route handler completion
+        but before response transmission to the client.
 
         Args:
             name: Unique identifier for this middleware function
