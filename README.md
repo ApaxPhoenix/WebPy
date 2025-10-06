@@ -1,25 +1,25 @@
 # WebPy Documentation
 
-**WebPy** is a lightweight Python framework designed to simplify web development. Whether you're building a small web application or a complex API, WebPy provides the tools you need to get the job done efficiently. This documentation will guide you through the core features, project structure, and essential functionalities of WebPy.
+**WebPy** is a lightweight Python framework for web development. It provides the tools needed for building web applications and APIs. This documentation covers the core features, project structure, and essential functionality.
 
 ## Core Features
 
 | **Feature**            | **Description**                                             |
 |-------------------------|-------------------------------------------------------------|
-| **Fast HTTP Handling**  | Efficiently manage HTTP requests and responses.             |
-| **Smart Routing**       | Define routes with ease and flexibility.                    |
-| **Jinja2 Templates**    | Create dynamic and reusable HTML templates.                 |
-| **Static File Serving** | Serve static files like CSS, JavaScript, and images.        |
-| **Session Management**  | Handle user sessions securely and simply.                   |
-| **HTTPS Support**       | Secure your app with built-in HTTPS.                        |
-| **Error Handling**      | Define custom error pages and responses.                    |
-| **Blueprint System**    | Organize your app into modular components.                  |
-| **Middleware System**   | Process requests/responses through customizable pipelines.  |
-| **WebSocket Support**   | Bidirectional communication with event-driven architecture. |
+| **Fast HTTP Handling**  | Handle HTTP requests and responses quickly and smoothly.    |
+| **Smart Routing**       | Set up your routes however you want—it's super flexible.    |
+| **Jinja2 Templates**    | Build dynamic HTML templates that you can reuse everywhere. |
+| **Static File Serving** | Serve up your CSS, JavaScript, and images with ease.        |
+| **Session Management**  | Manage user sessions in a way that's both secure and simple.|
+| **HTTPS Support**       | Lock down your app with built-in HTTPS support.             |
+| **Error Handling**      | Create custom error pages that actually look good.          |
+| **Blueprint System**    | Break your app into smaller, manageable pieces.             |
+| **Middleware System**   | Run custom logic on requests and responses as they flow through.|
+| **WebSocket Support**   | Get real-time, two-way communication working in no time.    |
 
 ## Project Structure
 
-A typical WebPy project is organized as follows:
+Here's how a typical WebPy project looks when you've got everything organized:
 
 ```
 project/
@@ -37,7 +37,7 @@ project/
 
 ### Creating Your First App
 
-To create a simple WebPy app, initialize the`WebPy` class and define your routes. The `run()` method starts the server.
+Getting started with WebPy is pretty straightforward. Just create an instance of the `WebPy` class, define where you want your routes to go, and fire up the server with the `run()` method.
 
 ```python
 from webpy import WebPy
@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
 ### Handling Requests
 
-WebPy makes it easy to handle different HTTP methods (GET, POST, etc.) and extract data from requests.
+WebPy makes dealing with different HTTP methods (like GET, POST, and friends) really easy. You can pull data from requests without jumping through hoops.
 
 ```python
 from webpy import WebPy
@@ -96,7 +96,7 @@ def data(request: Request, response: Response) -> None:
 
 ### Dynamic Routing
 
-WebPy supports dynamic routing, allowing you to extract variables from the URL.
+WebPy lets you set up dynamic routes so you can grab variables straight from the URL. It's perfect for things like user IDs or resource identifiers.
 
 ```python
 from webpy import WebPy
@@ -139,7 +139,7 @@ def resource(request: Request, response: Response) -> None:
 
 ### Using Templates
 
-WebPy integrates with **Jinja2** for templating, allowing you to create dynamic HTML pages.
+WebPy works great with **Jinja2** for templating. This means you can build dynamic HTML pages that adapt to whatever data you throw at them.
 
 ```html
 <!-- templates/index.html -->
@@ -196,7 +196,7 @@ def index(request: Request, response: Response) -> None:
 
 ### Blueprint System
 
-Organize larger apps into modular components with blueprints. Blueprints allow you to group related routes and functionality together, making your codebase more maintainable.
+When your app starts getting bigger, blueprints help you keep things organized. Think of them as a way to group related routes and functionality together so your codebase doesn't turn into a mess.
 
 ```python
 from webpy import WebPy
@@ -256,7 +256,7 @@ if __name__ == "__main__":
 
 ### Middleware System
 
-WebPy includes a Middleware system for processing requests and responses. Below is a simple example showing how to use the Middleware class to track user activity.
+WebPy's Middleware system lets you process requests and responses as they come in and go out. Here's a quick example showing how you can use it to track user activity.
 
 ```python
 from webpy import WebPy
@@ -304,7 +304,7 @@ if __name__ == "__main__":
 
 ### Error Handling
 
-WebPy allows you to define custom error pages and responses.
+Nobody likes seeing generic error pages. With WebPy, you can create custom error pages that match your app's style and give users actually helpful information.
 
 ```python
 from webpy import WebPy
@@ -361,7 +361,7 @@ if __name__ == "__main__":
 
 ### HTTPS Support
 
-WebPy supports HTTPS out of the box, allowing you to secure your app with SSL/TLS.
+Security matters, right? WebPy has HTTPS support built right in, so you can secure your app with SSL/TLS without needing to mess around with a bunch of extra configuration.
 
 ```python
 from webpy import WebPy
@@ -393,7 +393,7 @@ if __name__ == "__main__":
 
 ### Session Management
 
-WebPy provides built-in session management to handle user sessions securely.
+WebPy comes with session management already set up for you. You can track user sessions securely without having to reinvent the wheel.
 
 ```python
 from webpy import WebPy
@@ -449,7 +449,7 @@ if __name__ == "__main__":
 
 ### Static File Serving
 
-WebPy can serve static files like CSS, JavaScript, and images.
+Every web app needs static files. WebPy handles serving your CSS, JavaScript, and images without any fuss.
 
 ```python
 from webpy import WebPy
@@ -480,7 +480,7 @@ if __name__ == "__main__":
 
 ### Custom Middleware
 
-WebPy allows you to create custom middleware to process requests and responses.
+Want to do something with every request that comes in? Custom middleware is your friend. You can log stuff, check authentication, or do whatever preprocessing you need.
 
 ```python
 from webpy import WebPy
@@ -526,7 +526,7 @@ if __name__ == "__main__":
 
 ### Custom Error Pages
 
-WebPy allows you to define custom error pages for different HTTP status codes.
+Instead of returning boring JSON errors, you can serve up fully styled HTML error pages that match your app's design.
 
 ```python
 from webpy import WebPy
@@ -578,7 +578,7 @@ if __name__ == "__main__":
 
 ### WebSocket Support
 
-WebPy includes built-in WebSocket support for real-time bidirectional communication between server and clients using an event-driven architecture.
+Need real-time features? WebPy has WebSocket support baked in. You can set up bidirectional communication between your server and clients using a simple event-driven approach.
 
 ```python
 from webpy import WebPy
@@ -679,34 +679,3 @@ if __name__ == "__main__":
     # Start HTTP server on port 8080
     app.run(port=8080)
 ```
-
-### HTTPS Support
-
-WebPy supports HTTPS out of the box, allowing you to secure your app with SSL/TLS.
-
-```python
-from webpy import WebPy
-
-# Initialize the WebPy application
-app = WebPy()
-
-def main() -> None:
-    """
-    Main entry point for the application.
-    Starts the WebPy server with HTTPS enabled.
-    
-    Notes:
-        The certfile and keyfile parameters specify the paths to the SSL/TLS certificate
-        and private key files required for HTTPS.
-    """
-    # Start the server on all network interfaces (0.0.0.0) on port 443 (default HTTPS port)
-    # with SSL/TLS enabled using the specified certificate and key files
-    app.run(
-        ip="0.0.0.0",
-        port=443,
-        certfile="path/to/cert.pem",  # Path to SSL/TLS certificate
-        keyfile="path/to/key.pem"     # Path to private key
-    )
-
-if __name__ == "__main__":
-    main()
